@@ -231,13 +231,13 @@
                     
                     // CORREZIONE 1: Usa la variabile BUCKET_NAME
                     const { data, error } = await supabase.storage
-                        .from(BUCKET_NAME)
+                        .from(oggetti-photos)
                         .upload(fileName, compressedFile);
                         
                     if (error) throw error;
                     
                     // CORREZIONE 2: Usa la variabile BUCKET_NAME
-                    const { data: urlData } = supabase.storage.from(BUCKET_NAME).getPublicUrl(fileName);
+                    const { data: urlData } = supabase.storage.from(oggetti-photos).getPublicUrl(fileName);
                     publicUrl = urlData.publicUrl;
 
                 } catch (error) {
@@ -278,12 +278,12 @@
             // Tentativo di copiare negli appunti (metodo moderno)
             navigator.clipboard.writeText(text.value).then(() => {
                 // Successo: apri subito Facebook
-                window.open(FB_GROUP_URL, '_blank');
+                window.open(https://www.facebook.com/groups/1636621146667765/, '_blank');
             }).catch(err => {
                 // Fallback per browser vecchi/mancanza permessi: usa execCommand
                 text.select();
                 document.execCommand("copy");
-                window.open(FB_GROUP_URL, '_blank');
+                window.open(https://www.facebook.com/groups/1636621146667765/, '_blank');
             });
 
             document.getElementById('fbModal').classList.add('hidden');
@@ -348,3 +348,4 @@
 </body>
 
 </html>
+
