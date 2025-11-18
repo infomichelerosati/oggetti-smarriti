@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Oggetti Smarriti Grosseto</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/browser-image-compression@2.0.0/dist/browser-image-compression.js"></script>
+
+    <style>
+        #map { height: 300px; width: 100%; border-radius: 0.5rem; margin-bottom: 1rem; }
+        .loader { border-top-color: #3498db; -webkit-animation: spinner 1.5s linear infinite; animation: spinner 1.5s linear infinite; }
+        @keyframes spinner { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    </style>
+</head>
+<body class="bg-gray-100 font-sans pb-20">
+
+    <nav class="bg-blue-600 p-4 text-white shadow-md sticky top-0 z-50">
+        <div class="container mx-auto flex justify-between items-center">
+            <h1 class="font-bold text-xl">🔍 Grosseto Smarriti</h1>
+            <button id="loginBtn" onclick="login()" class="text-sm bg-white text-blue-600 px-3 py-1 rounded hidden">Login</button>
+            <button id="logoutBtn" onclick="logout()" class="text-sm bg-red-500 px-3 py-1 rounded hidden">Esci</button>
+        </div>
+    </nav>
+
+    <div class="container mx-auto p-4 max-w-md">
+        
+        <div class="flex justify-center gap-4 mb-6">
+            <button onclick="showSection('list')" class="bg-white py-2 px-4 rounded shadow text-blue-600 font-semibold">Lista</button>
+            <button onclick="showSection('add')" class="bg-white py-2 px-4 rounded shadow text-blue-600 font-semibold">➕ Segnala</button>
+            <button id="adminBtn" onclick="showSection('admin')" class="bg-gray-800 py-2 px-4 rounded shadow text-white font-semibold hidden">Admin</button>
+        </div>
+
+        <div id="listSection">
+            <h2 class="text-xl font-bold mb-4">Ultimi Avvistamenti</h2>
+            <div id="itemsContainer" class="space-y-4">
+                <p class="text-center text-gray-500">Caricamento...</p>
+            </div>
+        </div>
+
+        <div id="addSection" class="hidden bg-white p-6 rounded shadow-md">
+            <h2 class="text-xl font-bold mb-4">Hai trovato o perso qualcosa?</h2>
+            
+            <div id="loginWarning" class="text-center py-10 hidden">
+                <p class="mb-4">Devi accedere per segnalare un oggetto.</p>
+                <button onclick="login()" class="bg-blue-600 text-white px-6 py-2 rounded">Accedi con Google</button>
+            </div>
+
+            <form id="addForm" onsubmit="submitItem(event)">
+                <label class="block mb-2 font-bold">Cosa?</label>
+                <input type="text" id="title" class="w-full p-2 border rounded mb-4" placeholder="Es. Mazzo di chiavi" required>
+
+                <label class="block mb-2 font-bold">Descrizione</label>
+                <textarea id="desc" class="w-full p-2 border rounded mb-4" placeholder="Colore, dettagli..." required></textarea>
+
+                <label class="block mb-2 font-bold">Foto (Max 1)</label>
+                <input type="file" id="photo" accept="image/*" class="w-full mb-4">
+
+                <label class="block mb-2 font-bold">Dove? (Clicca sulla mappa)</label>
+                <div id="map"></div>
+                <input type="hidden" id="lat">
+                <input type="hidden" id="lng">
+
+                <button type="submit" id="submitBtn" class="w-full bg-green-600 text-white font-bold py-3 rounded hover:bg-green-700 transition">
+                    PUBBLICA SEGNALAZIONE
+                </button>
+            </form>
+        </div>
+
+        <div id="adminSection" class="hidden">
+            <h2 class="text-xl font-bold mb-4 text-red-600">Pannello Amministrazione</h2>
+            <p class="text-sm mb-4">Qui puoi eliminare oggetti o bannare utenti.</p>
+            <div id="adminList" class="space-y-2"></div>
+        </div>
+    </div>
+
+    <div id="fbModal" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center z-50">
+        <div class="bg-white p-6 rounded-lg max-w-sm mx-4 text-center">
+            <h3 class="text-xl font-bold mb-2">Oggetto Salvato! ✅</h3>
+            <p class="text-sm text-gray-600 mb-4">Ora pubblica nel gruppo Facebook per avvisare tutti.</p>
+            <textarea id="fbText" class="w-full border p-2 text-sm bg-gray-50 h-24 mb-4"></textarea>
+            <button onclick="copyAndGoToFb()" class="w-full bg-blue-600 text-white font-bold py-2 rounded mb-2">
+                Copia Testo e Vai su Facebook
+            </button>
+            <button onclick="document.getElementById('fbModal').classList.add('hidden')" class="text-gray-500 text-sm underline">Chiudi</button>
+        </div>
+    </div>
+
+    <script>
+        // --- 1. CONFIGURAZIONE ---
+        // *** INSERISCI QUI LA CHIAVE ANONIMA PUBBLICA ***
+        const SUPABASE_URL = 'https://xgfdlyymbvpdnmomcxhd.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhnZmRseXltYnZwZG5tb21jeGhkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMyMDIzOTgsImV4cCI6MjA3ODc3ODM5OH0.LJB7E--yAm5Nyxti749HVbxskjbURpKGuqK2c2hRBQs'; 
+        const FB_GROUP_URL = 'https://www.facebook.com/groups/1636621146667765/';
+
+        const supabase = supa.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        let currentUser = null;
+        let isAdmin = false;
+        let map, marker;
+
+        // --- 2. INIZIALIZZAZIONE ---
+        async function init() {
+            checkUser();
+            initMap();
+            loadItems();
+        }
+
+        // --- 3. MAPPA ---
+        function initMap() {
+            // Coordinate centro Grosseto
+            map = L.map('map').setView([42.7600, 11.1100], 14); 
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap'
+            }).addTo(map);
+
+            map.on('click', function(e) {
+                if (marker) map.removeLayer(marker);
+                marker = L.marker(e.latlng).addTo(map);
+                document.getElementById('lat').value = e.latlng.lat;
+                document.getElementById('lng').value = e.latlng.lng;
+            });
+        }
+
+        // --- 4. AUTENTICAZIONE ---
+        async function checkUser() {
+            const { data: { session } } = await supabase.auth.getSession();
+            currentUser = session?.user;
+
+            const loginBtn = document.getElementById('loginBtn');
+            const logoutBtn = document.getElementById('logoutBtn');
+            const form = document.getElementById('addForm');
+            const warning = document.getElementById('loginWarning');
+
+            if (currentUser) {
+                loginBtn.classList.add('hidden');
+                logoutBtn.classList.remove('hidden');
+                form.classList.remove('hidden');
+                warning.classList.add('hidden');
+                
+                // Check Admin
+                const { data, error } = await supabase.rpc('am_i_admin');
+                if (data === true) {
+                    isAdmin = true;
+                    document.getElementById('adminBtn').classList.remove('hidden');
+                }
+            } else {
+                loginBtn.classList.remove('hidden');
+                logoutBtn.classList.add('hidden');
+                form.classList.add('hidden');
+                warning.classList.remove('hidden');
+            }
+        }
+
+        async function login() {
+            await supabase.auth.signInWithOAuth({ provider: 'google' });
+        }
+
+        async function logout() {
+            await supabase.auth.signOut();
+            window.location.reload();
+        }
+
+        // --- 5. CARICAMENTO OGGETTI ---
+        async function loadItems() {
+            const container = document.getElementById('itemsContainer');
+            container.innerHTML = `<div class="text-center py-4"><div class="loader ease-linear rounded-full border-4 border-t-4 border-gray-200 h-12 w-12 mx-auto"></div></div>`;
+
+            const { data: items, error } = await supabase
+                .from('oggetti_smarriti')
+                .select('*')
+                .order('created_at', { ascending: false });
+
+            if (error) {
+                container.innerHTML = '<p class="text-red-500">Errore caricamento.</p>';
+                return;
+            }
+
+            container.innerHTML = items.map(item => `
+                <div class="bg-white p-4 rounded shadow-md flex gap-4">
+                    ${item.foto_url ? `<img src="${item.foto_url}" class="w-24 h-24 object-cover rounded bg-gray-200">` : '<div class="w-24 h-24 bg-gray-200 rounded flex items-center justify-center text-xs">No Foto</div>'}
+                    <div class="flex-1">
+                        <h3 class="font-bold text-lg">${item.titolo}</h3>
+                        <p class="text-gray-600 text-sm">${item.descrizione}</p>
+                        <div class="mt-2 text-xs text-gray-500">
+                            📍 <a href="http://www.google.com/maps/search/?api=1&query=${item.latitudine},${item.longitudine}" target="_blank" class="underline text-blue-500">Vedi Mappa</a>
+                            | 📅 ${new Date(item.created_at).toLocaleDateString()}
+                        </div>
+                        ${(currentUser && (currentUser.id === item.user_id || isAdmin)) ? 
+                          `<button onclick="deleteItem(${item.id})" class="text-red-500 text-xs mt-2 underline">Elimina</button>` : ''}
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // --- 6. INVIO E COMPRESSIONE ---
+        async function submitItem(e) {
+            e.preventDefault();
+            const btn = document.getElementById('submitBtn');
+            btn.innerText = "Caricamento...";
+            btn.disabled = true;
+
+            const title = document.getElementById('title').value;
+            const desc = document.getElementById('desc').value;
+            const lat = document.getElementById('lat').value;
+            const lng = document.getElementById('lng').value;
+            const fileInput = document.getElementById('photo');
+            let publicUrl = null;
+
+            // Compressione e Upload Foto
+            if (fileInput.files.length > 0) {
+                const imageFile = fileInput.files[0];
+                const options = { maxSizeMB: 1, maxWidthOrHeight: 1024, useWebWorker: true };
+                
+                try {
+                    const compressedFile = await imageCompression(imageFile, options);
+                    const fileName = `${Date.now()}_${imageFile.name}`;
+                    
+                    const { data, error } = await supabase.storage
+                        .from('foto_oggetti')
+                        .upload(fileName, compressedFile);
+                        
+                    if (error) throw error;
+                    
+                    const { data: urlData } = supabase.storage.from('foto_oggetti').getPublicUrl(fileName);
+                    publicUrl = urlData.publicUrl;
+
+                } catch (error) {
+                    alert("Errore foto: " + error.message);
+                    btn.innerText = "RIPROVA"; btn.disabled = false;
+                    return;
+                }
+            }
+
+            // Salvataggio Database
+            const { error } = await supabase.from('oggetti_smarriti').insert({
+                titolo: title,
+                descrizione: desc,
+                latitudine: lat || null,
+                longitudine: lng || null,
+                foto_url: publicUrl
+            });
+
+            if (error) {
+                alert("Errore salvataggio: " + error.message);
+            } else {
+                // PREPARA SHARE FACEBOOK
+                const text = `📢 OGGETTO SEGNALATO\nCosa: ${title}\nDettagli: ${desc}\n\nVedi tutti i ritrovamenti su: ${window.location.href}`;
+                document.getElementById('fbText').value = text;
+                document.getElementById('fbModal').classList.remove('hidden');
+                loadItems();
+                showSection('list');
+                e.target.reset();
+            }
+            btn.innerText = "PUBBLICA SEGNALAZIONE";
+            btn.disabled = false;
+        }
+
+        // --- 7. UTILITY ---
+        function copyAndGoToFb() {
+            const text = document.getElementById('fbText');
+            
+            // Tentativo di copiare negli appunti (metodo moderno)
+            navigator.clipboard.writeText(text.value).then(() => {
+                // Successo: apri subito Facebook
+                window.open(FB_GROUP_URL, '_blank');
+            }).catch(err => {
+                // Fallback per browser vecchi/mancanza permessi: usa execCommand
+                text.select();
+                document.execCommand("copy");
+                window.open(FB_GROUP_URL, '_blank');
+            });
+
+            document.getElementById('fbModal').classList.add('hidden');
+        }
+
+        async function deleteItem(id) {
+            if(!confirm("Sei sicuro di voler eliminare?")) return;
+            // La Policy RLS controlla se l'utente ha il diritto di eliminare
+            await supabase.from('oggetti_smarriti').delete().eq('id', id);
+            loadItems();
+        }
+
+        function showSection(id) {
+            ['listSection', 'addSection', 'adminSection'].forEach(s => document.getElementById(s).classList.add('hidden'));
+            document.getElementById(id + 'Section').classList.remove('hidden');
+            if(id === 'add') setTimeout(() => map.invalidateSize(), 200); // Fix rendering mappa
+            if(id === 'admin') loadAdminPanel(); // Carica il pannello Admin
+        }
+        
+        // --- 8. LOGICA ADMIN ---
+        async function loadAdminPanel() {
+            const container = document.getElementById('adminList');
+            container.innerHTML = "Caricamento utenti...";
+            
+            // Solo gli admin possono vedere questa lista per Policy RLS
+            const { data: profiles, error } = await supabase
+                .from('profiles')
+                .select('id, email, is_admin, is_banned');
+
+            if (error || !profiles || !isAdmin) {
+                container.innerHTML = "<p class='text-red-500'>Accesso negato o errore di caricamento.</p>";
+                return;
+            }
+
+            container.innerHTML = profiles.map(p => `
+                <div class="flex justify-between items-center p-2 border rounded">
+                    <span class="text-sm">${p.email}</span>
+                    <div>
+                        ${p.is_admin ? '<span class="text-xs text-green-600 mr-2">ADMIN</span>' : `<button onclick="toggleAdmin('${p.id}', true)" class="text-xs text-blue-500 underline mr-2">Nomina Admin</button>`}
+                        ${p.is_banned ? `<button onclick="toggleBan('${p.id}', false)" class="text-xs text-red-700 underline">Unban</button>` : `<button onclick="toggleBan('${p.id}', true)" class="text-xs text-red-500 underline">Banna</button>`}
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        async function toggleAdmin(id, state) {
+            await supabase.from('profiles').update({ is_admin: state }).eq('id', id);
+            loadAdminPanel();
+            alert(`Stato Admin cambiato.`);
+        }
+
+        async function toggleBan(id, state) {
+            await supabase.from('profiles').update({ is_banned: state }).eq('id', id);
+            loadAdminPanel();
+            alert(`Stato Ban cambiato.`);
+        }
+
+
+        // Avvia tutto
+        init();
+    </script>
+</body>
+</html>
