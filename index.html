@@ -92,10 +92,12 @@
 
     <script>
         // --- 1. CONFIGURAZIONE ---
-        // *** INSERISCI QUI LA CHIAVE ANONIMA PUBBLICA ***
         const SUPABASE_URL = 'https://xgfdlyymbvpdnmomcxhd.supabase.co';
+        // *** HO INSERITO LA TUA CHIAVE ANONIMA QUI ***
         const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhnZmRseXltYnZwZG5tb21jeGhkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMyMDIzOTgsImV4cCI6MjA3ODc3ODM5OH0.LJB7E--yAm5Nyxti749HVbxskjbURpKGuqK2c2hRBQs'; 
         const FB_GROUP_URL = 'https://www.facebook.com/groups/1636621146667765/';
+        // *** NOME DEL BUCKET: DEVE CORRISPONDERE ESATTAMENTE AL NOME SU SUPABASE ***
+        const BUCKET_NAME = 'oggetti-photos';
 
         const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
         let currentUser = null;
@@ -156,16 +158,16 @@
         }
 
         async function login() {
-    // Inserisci l'URL completo della tua PWA, inclusa la sottocartella /nome-repository/
-    const redirectUrl = 'https://infomichelerosati.github.io/oggetti-smarriti/'; 
+            // Inserisci l'URL completo della tua PWA, inclusa la sottocartella /nome-repository/
+            const redirectUrl = 'https://infomichelerosati.github.io/oggetti-smarriti/'; 
 
-    await supabase.auth.signInWithOAuth({ 
-        provider: 'google', 
-        options: { 
-            redirectTo: redirectUrl 
-        } 
-    });
-}
+            await supabase.auth.signInWithOAuth({ 
+                provider: 'google', 
+                options: { 
+                    redirectTo: redirectUrl 
+                } 
+            });
+        }
 
         async function logout() {
             await supabase.auth.signOut();
@@ -183,7 +185,7 @@
                 .order('created_at', { ascending: false });
 
             if (error) {
-                container.innerHTML = '<p class="text-red-500">Errore caricamento.</p>';
+                container.innerHTML = `<p class="text-red-500">Errore caricamento. ${error.message}</p>`;
                 return;
             }
 
@@ -227,13 +229,15 @@
                     const compressedFile = await imageCompression(imageFile, options);
                     const fileName = `${Date.now()}_${imageFile.name}`;
                     
+                    // CORREZIONE 1: Usa la variabile BUCKET_NAME
                     const { data, error } = await supabase.storage
-                        .from('oggetti_photos')
+                        .from(BUCKET_NAME)
                         .upload(fileName, compressedFile);
                         
                     if (error) throw error;
                     
-                    const { data: urlData } = supabase.storage.from('oggetti-photos').getPublicUrl(fileName);
+                    // CORREZIONE 2: Usa la variabile BUCKET_NAME
+                    const { data: urlData } = supabase.storage.from(BUCKET_NAME).getPublicUrl(fileName);
                     publicUrl = urlData.publicUrl;
 
                 } catch (error) {
@@ -344,8 +348,3 @@
 </body>
 
 </html>
-
-
-
-
-
