@@ -97,7 +97,7 @@
         const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhnZmRseXltYnZwZG5tb21jeGhkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMyMDIzOTgsImV4cCI6MjA3ODc3ODM5OH0.LJB7E--yAm5Nyxti749HVbxskjbURpKGuqK2c2hRBQs'; 
         const FB_GROUP_URL = 'https://www.facebook.com/groups/1636621146667765/';
 
-        const supabase = supa.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
         let currentUser = null;
         let isAdmin = false;
         let map, marker;
@@ -334,4 +334,5 @@
         init();
     </script>
 </body>
+
 </html>
