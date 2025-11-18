@@ -178,7 +178,7 @@
             container.innerHTML = `<div class="text-center py-4"><div class="loader ease-linear rounded-full border-4 border-t-4 border-gray-200 h-12 w-12 mx-auto"></div></div>`;
 
             const { data: items, error } = await supabase
-                .from('oggetti-photos')
+                .from('oggetti_smarriti')
                 .select('*')
                 .order('created_at', { ascending: false });
 
@@ -228,7 +228,7 @@
                     const fileName = `${Date.now()}_${imageFile.name}`;
                     
                     const { data, error } = await supabase.storage
-                        .from('foto_oggetti')
+                        .from('oggetti_photos')
                         .upload(fileName, compressedFile);
                         
                     if (error) throw error;
@@ -344,6 +344,7 @@
 </body>
 
 </html>
+
 
 
 
