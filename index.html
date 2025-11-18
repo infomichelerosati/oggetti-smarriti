@@ -60,6 +60,12 @@
 
         <div id="listSection">
             <h2 class="text-xl font-bold mb-4">Ultimi Avvistamenti</h2>
+            
+            <!-- CAMPO DI RICERCA AGGIUNTO -->
+            <div class="mb-4">
+                <input type="text" id="searchBar" onkeyup="loadItems()" placeholder="Cerca per titolo o descrizione..." class="w-full p-2 border rounded">
+            </div>
+            
             <div id="itemsContainer" class="space-y-4">
                 <p class="text-center text-gray-500">Caricamento...</p>
             </div>
@@ -199,20 +205,35 @@
             window.location.reload();
         }
 
-        // --- 5. CARICAMENTO OGGETTI ---
+        // --- 5. CARICAMENTO OGGETTI (Aggiornata con funzionalità di ricerca) ---
         async function loadItems() {
             const container = document.getElementById('itemsContainer');
+            const searchTerm = document.getElementById('searchBar').value.toLowerCase(); // Ottiene il termine di ricerca
             container.innerHTML = `<div class="text-center py-4"><div class="loader ease-linear rounded-full border-4 border-t-4 border-gray-200 h-12 w-12 mx-auto"></div></div>`;
 
-            const { data: items, error } = await supabase
+            let query = supabase
                 .from('oggetti_smarriti')
                 .select('*')
                 .order('created_at', { ascending: false });
 
+            // LOGICA DI RICERCA: Applica il filtro se c'è un termine di ricerca
+            if (searchTerm) {
+                // Filtra per titolo o descrizione usando la sintassi OR di Supabase/PostgreSQL
+                query = query.or(`titolo.ilike.%${searchTerm}%,descrizione.ilike.%${searchTerm}%`);
+            }
+
+            const { data: items, error } = await query;
+
             if (error) {
-                container.innerHTML = `<p class="text-red-500">Errore caricamento. ${error.message}</p>`;
+                container.innerHTML = `<p class="text-red-500">Errore caricamento: ${error.message}</p>`;
                 return;
             }
+            
+            if (items.length === 0) {
+                 container.innerHTML = `<p class="text-center text-gray-500 py-8">Nessun oggetto trovato per la ricerca "${searchTerm}"</p>`;
+                 return;
+            }
+
 
             container.innerHTML = items.map(item => `
                 <div class="bg-white p-4 rounded shadow-md flex gap-4">
@@ -322,10 +343,6 @@
 
         // Sostituito confirm nativo con un approccio asincrono semplice o controllo diretto (qui mantengo una logica semplice)
         async function deleteItem(id) {
-            // Nota: in produzione meglio usare un modale custom anche qui, ma per ora usiamo un controllo non bloccante se possibile
-            // Poiché window.confirm è bloccante e non ideale, qui lo lascio ma consiglio di cambiarlo. 
-            // Per questa correzione mi limito a rimuoverlo per evitare blocchi nell'iframe o errori di policy se severi.
-            // Se vuoi confermare, usa un modale. Qui procedo diretto per semplicità del fix.
              if(!window.confirm("Eliminare definitivamente?")) return; 
 
             await supabase.from('oggetti_smarriti').delete().eq('id', id);
