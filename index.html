@@ -278,12 +278,12 @@
             // Tentativo di copiare negli appunti (metodo moderno)
             navigator.clipboard.writeText(text.value).then(() => {
                 // Successo: apri subito Facebook
-                window.open(https://www.facebook.com/groups/1636621146667765/, '_blank');
+                window.open(FB_GROUP_URL, '_blank');
             }).catch(err => {
                 // Fallback per browser vecchi/mancanza permessi: usa execCommand
                 text.select();
                 document.execCommand("copy");
-                window.open(https://www.facebook.com/groups/1636621146667765/, '_blank');
+                window.open(FB_GROUP_URL, '_blank');
             });
 
             document.getElementById('fbModal').classList.add('hidden');
@@ -348,4 +348,5 @@
 </body>
 
 </html>
+
 
