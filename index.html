@@ -156,8 +156,16 @@
         }
 
         async function login() {
-            await supabase.auth.signInWithOAuth({ provider: 'google' });
-        }
+    // Inserisci l'URL completo della tua PWA, inclusa la sottocartella /nome-repository/
+    const redirectUrl = 'https://infomichelerosati.github.io/oggetti-smarriti/'; 
+
+    await supabase.auth.signInWithOAuth({ 
+        provider: 'google', 
+        options: { 
+            redirectTo: redirectUrl 
+        } 
+    });
+}
 
         async function logout() {
             await supabase.auth.signOut();
@@ -336,5 +344,6 @@
 </body>
 
 </html>
+
 
 
