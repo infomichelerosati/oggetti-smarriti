@@ -37,6 +37,9 @@
             <h1 class="font-bold text-lg leading-none">Grosseto<br><span class="text-blue-200 text-sm font-normal">Oggetti Smarriti</span></h1>
         </div>
         <div class="flex gap-3 items-center">
+            <!-- Help Button (NUOVO) -->
+            <button onclick="openHelpModal()" class="text-2xl hover:scale-110 transition-transform" title="Istruzioni">📘</button>
+            
             <button id="inboxBtn" onclick="showInbox()" class="relative hidden text-2xl">🔔<span id="msgBadge" class="notification-badge">0</span></button>
             <button id="loginBtn" onclick="openAuthModal()" class="text-xs bg-white text-blue-600 px-3 py-1.5 rounded font-bold hidden shadow">ACCEDI</button>
             <button id="logoutBtn" onclick="logout()" class="text-xs bg-blue-800 text-white px-3 py-1.5 rounded hidden">ESCI</button>
@@ -129,8 +132,57 @@
     </nav>
 
     <!-- MODALI -->
+
+    <!-- HELP MODAL (NUOVO) -->
+    <div id="helpModal" class="fixed inset-0 bg-black bg-opacity-60 hidden flex items-center justify-center z-[100] backdrop-blur-sm p-4">
+        <div class="bg-white p-6 rounded-2xl max-w-md w-full shadow-2xl max-h-[80vh] flex flex-col">
+            <div class="flex justify-between items-center mb-4 border-b pb-2">
+                <h3 class="text-xl font-bold text-gray-800">📘 Guida Rapida</h3>
+                <button onclick="closeHelpModal()" class="text-gray-400 hover:text-gray-600 text-2xl">✕</button>
+            </div>
+            
+            <div class="space-y-4 text-sm text-gray-700 overflow-y-auto pr-2">
+                <p class="italic text-xs mb-2 text-gray-500">Benvenuto nella community! Ecco come funziona.</p>
+
+                <div class="bg-gray-50 p-3 rounded-lg border border-gray-100">
+                    <h4 class="font-bold text-gray-900 flex items-center gap-2 mb-1">👤 Visitatore</h4>
+                    <ul class="list-disc pl-5 text-xs space-y-1 text-gray-600">
+                        <li><strong>Consultare:</strong> Vedi lista, mappa e foto degli oggetti.</li>
+                        <li><strong>Cercare:</strong> Filtra per categoria o testo.</li>
+                        <li><strong>Limiti:</strong> Non puoi segnalare o contattare senza account.</li>
+                    </ul>
+                </div>
+
+                <div class="bg-blue-50 p-3 rounded-lg border border-blue-100">
+                    <h4 class="font-bold text-blue-900 flex items-center gap-2 mb-1">🔐 Utente Registrato</h4>
+                    <ul class="list-disc pl-5 text-xs space-y-1 text-gray-600">
+                        <li><strong>Segnalare:</strong> Usa il tasto <strong>(+)</strong>. Foto e posizione mappa sono obbligatorie.</li>
+                        <li><strong>Contattare:</strong> Premi <strong>💬 Contatta</strong> per scrivere al proprietario (Max 2 messaggi).</li>
+                        <li><strong>Gestire:</strong> Premi <strong>✅ Trovato!</strong> se hai risolto. Usa 🗑️ per cancellare.</li>
+                        <li><strong>Attesa:</strong> I nuovi account devono essere approvati da un Admin.</li>
+                    </ul>
+                </div>
+
+                <div class="bg-red-50 p-3 rounded-lg border border-red-100">
+                    <h4 class="font-bold text-red-900 flex items-center gap-2 mb-1">⚠️ Sicurezza</h4>
+                    <ul class="list-disc pl-5 text-xs space-y-1 text-gray-600">
+                        <li><strong>Mappa:</strong> Indica SOLO luoghi pubblici (piazze, parchi). <strong>MAI casa tua.</strong></li>
+                        <li><strong>Foto:</strong> Oscura dati sensibili se fotografi documenti.</li>
+                        <li><strong>Incontri:</strong> Sempre in luoghi pubblici e frequentati.</li>
+                    </ul>
+                </div>
+                
+                <div class="bg-gray-50 p-3 rounded-lg border border-gray-100">
+                    <h4 class="font-bold text-gray-900 flex items-center gap-2 mb-1">👮 Admin</h4>
+                    <p class="text-xs text-gray-600">Gestione utenti (approvazioni/ban) e pulizia oggetti ritrovati.</p>
+                </div>
+            </div>
+            
+            <button onclick="closeHelpModal()" class="w-full bg-blue-600 text-white font-bold py-3 rounded-xl mt-4 shadow hover:bg-blue-700 transition">Ho capito</button>
+        </div>
+    </div>
     
-    <!-- AUTH MODAL (NUOVO) -->
+    <!-- AUTH MODAL -->
     <div id="authModal" class="fixed inset-0 bg-black bg-opacity-60 hidden flex items-center justify-center z-[100] backdrop-blur-sm p-4">
         <div class="bg-white p-6 rounded-2xl max-w-sm w-full shadow-2xl relative">
             <button onclick="closeAuthModal()" class="absolute top-2 right-2 text-gray-500 hover:text-gray-800 text-xl px-2">✕</button>
@@ -254,7 +306,16 @@
             if(currentUser && isAuthorized) checkMessages();
         }
 
-        // --- NUOVO: GESTIONE AUTH (Email + Google) ---
+        // --- NUOVO: GESTIONE GUIDA ---
+        function openHelpModal() {
+            document.getElementById('helpModal').classList.remove('hidden');
+        }
+        function closeHelpModal() {
+            document.getElementById('helpModal').classList.add('hidden');
+        }
+        // -----------------------------
+
+        // --- GESTIONE AUTH (Email + Google) ---
         function openAuthModal() {
             document.getElementById('authModal').classList.remove('hidden');
             isLoginMode = true;
