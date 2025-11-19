@@ -37,9 +37,7 @@
             <h1 class="font-bold text-lg leading-none">Grosseto<br><span class="text-blue-200 text-sm font-normal">Oggetti Smarriti</span></h1>
         </div>
         <div class="flex gap-3 items-center">
-            <!-- Help Button (NUOVO) -->
             <button onclick="openHelpModal()" class="text-2xl hover:scale-110 transition-transform" title="Istruzioni">📘</button>
-            
             <button id="inboxBtn" onclick="showInbox()" class="relative hidden text-2xl">🔔<span id="msgBadge" class="notification-badge">0</span></button>
             <button id="loginBtn" onclick="openAuthModal()" class="text-xs bg-white text-blue-600 px-3 py-1.5 rounded font-bold hidden shadow">ACCEDI</button>
             <button id="logoutBtn" onclick="logout()" class="text-xs bg-blue-800 text-white px-3 py-1.5 rounded hidden">ESCI</button>
@@ -110,9 +108,17 @@
             <button onclick="showSection('list')" class="mt-6 w-full py-3 text-blue-600 font-bold border border-blue-600 rounded-lg">Torna alla Lista</button>
         </div>
 
+        <!-- ADMIN SECTION (MODIFICATA) -->
         <div id="adminSection" class="hidden max-w-lg mx-auto">
-            <h2 class="text-xl font-bold mb-4 text-gray-800">Amministrazione</h2>
+            <h2 class="text-xl font-bold mb-2 text-gray-800">Amministrazione</h2>
             <p class="text-xs text-gray-500 mb-4">Gestisci utenti e permessi. <br>👑 = Super Admin</p>
+            
+            <!-- NUOVA BARRA DI RICERCA ADMIN -->
+            <div class="relative mb-4">
+                <input type="text" id="adminSearch" onkeyup="renderAdminList()" placeholder="Cerca utente per email..." class="w-full p-2 pl-8 border rounded-lg text-sm bg-gray-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <span class="absolute left-2 top-2 text-gray-400 text-sm">🔍</span>
+            </div>
+
             <div id="adminList" class="space-y-2"></div>
         </div>
     </main>
@@ -132,18 +138,14 @@
     </nav>
 
     <!-- MODALI -->
-
-    <!-- HELP MODAL (NUOVO) -->
     <div id="helpModal" class="fixed inset-0 bg-black bg-opacity-60 hidden flex items-center justify-center z-[100] backdrop-blur-sm p-4">
         <div class="bg-white p-6 rounded-2xl max-w-md w-full shadow-2xl max-h-[80vh] flex flex-col">
             <div class="flex justify-between items-center mb-4 border-b pb-2">
                 <h3 class="text-xl font-bold text-gray-800">📘 Guida Rapida</h3>
                 <button onclick="closeHelpModal()" class="text-gray-400 hover:text-gray-600 text-2xl">✕</button>
             </div>
-            
             <div class="space-y-4 text-sm text-gray-700 overflow-y-auto pr-2">
                 <p class="italic text-xs mb-2 text-gray-500">Benvenuto nella community! Ecco come funziona.</p>
-
                 <div class="bg-gray-50 p-3 rounded-lg border border-gray-100">
                     <h4 class="font-bold text-gray-900 flex items-center gap-2 mb-1">👤 Visitatore</h4>
                     <ul class="list-disc pl-5 text-xs space-y-1 text-gray-600">
@@ -152,7 +154,6 @@
                         <li><strong>Limiti:</strong> Non puoi segnalare o contattare senza account.</li>
                     </ul>
                 </div>
-
                 <div class="bg-blue-50 p-3 rounded-lg border border-blue-100">
                     <h4 class="font-bold text-blue-900 flex items-center gap-2 mb-1">🔐 Utente Registrato</h4>
                     <ul class="list-disc pl-5 text-xs space-y-1 text-gray-600">
@@ -162,7 +163,6 @@
                         <li><strong>Attesa:</strong> I nuovi account devono essere approvati da un Admin.</li>
                     </ul>
                 </div>
-
                 <div class="bg-red-50 p-3 rounded-lg border border-red-100">
                     <h4 class="font-bold text-red-900 flex items-center gap-2 mb-1">⚠️ Sicurezza</h4>
                     <ul class="list-disc pl-5 text-xs space-y-1 text-gray-600">
@@ -171,44 +171,29 @@
                         <li><strong>Incontri:</strong> Sempre in luoghi pubblici e frequentati.</li>
                     </ul>
                 </div>
-                
                 <div class="bg-gray-50 p-3 rounded-lg border border-gray-100">
                     <h4 class="font-bold text-gray-900 flex items-center gap-2 mb-1">👮 Admin</h4>
                     <p class="text-xs text-gray-600">Gestione utenti (approvazioni/ban) e pulizia oggetti ritrovati.</p>
                 </div>
             </div>
-            
             <button onclick="closeHelpModal()" class="w-full bg-blue-600 text-white font-bold py-3 rounded-xl mt-4 shadow hover:bg-blue-700 transition">Ho capito</button>
         </div>
     </div>
-    
-    <!-- AUTH MODAL -->
+
     <div id="authModal" class="fixed inset-0 bg-black bg-opacity-60 hidden flex items-center justify-center z-[100] backdrop-blur-sm p-4">
         <div class="bg-white p-6 rounded-2xl max-w-sm w-full shadow-2xl relative">
             <button onclick="closeAuthModal()" class="absolute top-2 right-2 text-gray-500 hover:text-gray-800 text-xl px-2">✕</button>
-            
             <h3 id="authTitle" class="text-xl font-bold mb-4 text-center">Accedi</h3>
-            
-            <!-- Google Login -->
             <button onclick="loginGoogle()" class="w-full bg-white border border-gray-300 text-gray-700 font-bold py-3 rounded-lg shadow-sm flex items-center justify-center gap-2 mb-4 hover:bg-gray-50">
                 <svg class="w-5 h-5" viewBox="0 0 24 24"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
                 Accedi con Google
             </button>
-
-            <div class="flex items-center my-4">
-                <div class="flex-1 border-t border-gray-300"></div>
-                <span class="px-3 text-xs text-gray-500 font-bold">OPPURE</span>
-                <div class="flex-1 border-t border-gray-300"></div>
-            </div>
-
-            <!-- Email Form -->
+            <div class="flex items-center my-4"><div class="flex-1 border-t border-gray-300"></div><span class="px-3 text-xs text-gray-500 font-bold">OPPURE</span><div class="flex-1 border-t border-gray-300"></div></div>
             <div id="emailForm" class="space-y-3">
                 <input type="email" id="authEmail" placeholder="Email" class="w-full p-3 border rounded-lg text-sm focus:border-blue-500 focus:outline-none">
                 <input type="password" id="authPass" placeholder="Password" class="w-full p-3 border rounded-lg text-sm focus:border-blue-500 focus:outline-none">
-                
                 <button id="authActionBtn" onclick="handleEmailAuth()" class="w-full bg-blue-600 text-white font-bold py-3 rounded-lg shadow hover:bg-blue-700">Accedi con Email</button>
             </div>
-
             <div class="mt-4 text-center text-sm">
                 <span id="authSwitchText" class="text-gray-600">Non hai un account?</span>
                 <button onclick="toggleAuthMode()" id="authSwitchBtn" class="text-blue-600 font-bold underline ml-1">Registrati</button>
@@ -216,7 +201,6 @@
         </div>
     </div>
 
-    <!-- MAP VIEW Modal -->
     <div id="viewMapModal" class="fixed inset-0 bg-black bg-opacity-60 hidden flex items-center justify-center z-[100] backdrop-blur-sm p-4">
         <div class="bg-white p-4 rounded-2xl max-w-sm w-full shadow-2xl relative">
             <button onclick="closeViewMap()" class="absolute top-2 right-2 text-gray-500 hover:text-gray-800 z-10 bg-white rounded-full p-1 w-8 h-8 flex items-center justify-center shadow-sm">✕</button>
@@ -228,13 +212,11 @@
         </div>
     </div>
 
-    <!-- IMAGE VIEW Modal -->
     <div id="viewImageModal" class="fixed inset-0 bg-black bg-opacity-95 hidden flex items-center justify-center z-[100] backdrop-blur-sm p-0" onclick="closeImageModal()">
         <button onclick="closeImageModal()" class="absolute top-4 right-4 text-white z-20 bg-gray-800 bg-opacity-50 rounded-full p-2 w-10 h-10 flex items-center justify-center shadow-lg border border-gray-600">✕</button>
         <img id="fullScreenImage" src="" class="max-h-screen max-w-full object-contain" alt="Oggetto a schermo intero">
     </div>
 
-    <!-- Contact Modal -->
     <div id="contactModal" class="fixed inset-0 bg-black bg-opacity-60 hidden flex items-center justify-center z-[100] backdrop-blur-sm p-4">
         <div class="bg-white p-6 rounded-2xl max-w-sm w-full shadow-2xl">
             <h3 class="text-lg font-bold mb-2">Scrivi al proprietario</h3>
@@ -246,7 +228,6 @@
         </div>
     </div>
 
-    <!-- FB Modal -->
     <div id="fbModal" class="fixed inset-0 bg-black bg-opacity-60 hidden flex items-center justify-center z-[100] backdrop-blur-sm">
         <div class="bg-white p-6 rounded-2xl max-w-xs w-full mx-4 text-center shadow-2xl">
             <div class="w-12 h-12 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-3 text-2xl">✅</div>
@@ -258,7 +239,6 @@
         </div>
     </div>
     
-    <!-- POLICY Modal -->
     <div id="policyModal" class="fixed inset-0 bg-black bg-opacity-60 hidden flex items-center justify-center z-[100] backdrop-blur-sm p-4">
         <div class="bg-white p-6 rounded-2xl max-w-md w-full shadow-2xl max-h-[80vh] overflow-y-auto">
             <h3 class="text-lg font-bold mb-2">Privacy & Regole</h3>
@@ -291,7 +271,11 @@
         let viewMapInstance = null;
         let currentViewLat = 0;
         let currentViewLng = 0;
-        let isLoginMode = true; // Stato modale auth (Login o Registrazione)
+        let isLoginMode = true; 
+
+        // GLOBAL CACHE PER ADMIN
+        let adminUsersCache = [];
+        let adminFoundItemsCache = [];
 
         const CATEGORIES = ['Chiavi', 'Documenti', 'Borse/Zaini/Portafogli', 'Biciclette', 'Elettronica', 'Animali', 'Abbigliamento', 'Gioielli', 'Altro'];
         let currentFilter = 'Tutti';
@@ -306,109 +290,43 @@
             if(currentUser && isAuthorized) checkMessages();
         }
 
-        // --- NUOVO: GESTIONE GUIDA ---
-        function openHelpModal() {
-            document.getElementById('helpModal').classList.remove('hidden');
-        }
-        function closeHelpModal() {
-            document.getElementById('helpModal').classList.add('hidden');
-        }
-        // -----------------------------
+        function openHelpModal() { document.getElementById('helpModal').classList.remove('hidden'); }
+        function closeHelpModal() { document.getElementById('helpModal').classList.add('hidden'); }
 
-        // --- GESTIONE AUTH (Email + Google) ---
-        function openAuthModal() {
-            document.getElementById('authModal').classList.remove('hidden');
-            isLoginMode = true;
-            updateAuthUI();
-        }
+        function openAuthModal() { document.getElementById('authModal').classList.remove('hidden'); isLoginMode = true; updateAuthUI(); }
+        function closeAuthModal() { document.getElementById('authModal').classList.add('hidden'); document.getElementById('authEmail').value = ''; document.getElementById('authPass').value = ''; }
+        function toggleAuthMode() { isLoginMode = !isLoginMode; updateAuthUI(); }
         
-        function closeAuthModal() {
-            document.getElementById('authModal').classList.add('hidden');
-            document.getElementById('authEmail').value = '';
-            document.getElementById('authPass').value = '';
-        }
-
-        function toggleAuthMode() {
-            isLoginMode = !isLoginMode;
-            updateAuthUI();
-        }
-
         function updateAuthUI() {
-            const title = document.getElementById('authTitle');
-            const btn = document.getElementById('authActionBtn');
-            const switchText = document.getElementById('authSwitchText');
-            const switchBtn = document.getElementById('authSwitchBtn');
-
-            if (isLoginMode) {
-                title.innerText = "Accedi";
-                btn.innerText = "Accedi con Email";
-                switchText.innerText = "Non hai un account?";
-                switchBtn.innerText = "Registrati";
-            } else {
-                title.innerText = "Registrati";
-                btn.innerText = "Crea Account";
-                switchText.innerText = "Hai già un account?";
-                switchBtn.innerText = "Accedi";
-            }
+            const title = document.getElementById('authTitle'); const btn = document.getElementById('authActionBtn'); const switchText = document.getElementById('authSwitchText'); const switchBtn = document.getElementById('authSwitchBtn');
+            if (isLoginMode) { title.innerText = "Accedi"; btn.innerText = "Accedi con Email"; switchText.innerText = "Non hai un account?"; switchBtn.innerText = "Registrati"; } 
+            else { title.innerText = "Registrati"; btn.innerText = "Crea Account"; switchText.innerText = "Hai già un account?"; switchBtn.innerText = "Accedi"; }
         }
 
         async function handleEmailAuth() {
-            const email = document.getElementById('authEmail').value;
-            const password = document.getElementById('authPass').value;
-            const btn = document.getElementById('authActionBtn');
-
-            if (!email || !password) {
-                showToast("Inserisci email e password");
-                return;
-            }
-
-            btn.disabled = true;
-            btn.innerText = "Attendi...";
-
+            const email = document.getElementById('authEmail').value; const password = document.getElementById('authPass').value; const btn = document.getElementById('authActionBtn');
+            if (!email || !password) { showToast("Inserisci email e password"); return; }
+            btn.disabled = true; btn.innerText = "Attendi...";
             try {
                 if (isLoginMode) {
-                    // LOGIN
                     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-                    if (error) throw error;
-                    closeAuthModal();
-                    window.location.reload(); // Ricarica per aggiornare stato
+                    if (error) throw error; closeAuthModal(); window.location.reload(); 
                 } else {
-                    // REGISTRAZIONE
                     const { data, error } = await supabase.auth.signUp({ email, password });
                     if (error) throw error;
-                    
-                    // Check se email confirmation è attiva su Supabase
-                    if (data.session) {
-                        showToast("Registrazione completata!");
-                        closeAuthModal();
-                        window.location.reload();
-                    } else {
-                        showToast("Controlla la tua email per confermare!");
-                        closeAuthModal();
-                    }
+                    if (data.session) { showToast("Registrazione completata!"); closeAuthModal(); window.location.reload(); } else { showToast("Controlla la tua email per confermare!"); closeAuthModal(); }
                 }
-            } catch (error) {
-                showToast("Errore: " + (error.message === "Invalid login credentials" ? "Credenziali errate" : error.message));
-            } finally {
-                btn.disabled = false;
-                updateAuthUI();
-            }
+            } catch (error) { showToast("Errore: " + (error.message === "Invalid login credentials" ? "Credenziali errate" : error.message)); } 
+            finally { btn.disabled = false; updateAuthUI(); }
         }
 
-        async function loginGoogle() {
-            const redirectUrl = 'https://infomichelerosati.github.io/oggetti-smarriti/'; 
-            await supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: redirectUrl } });
-        }
-
+        async function loginGoogle() { const redirectUrl = 'https://infomichelerosati.github.io/oggetti-smarriti/'; await supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: redirectUrl } }); }
         async function logout() { await supabase.auth.signOut(); window.location.reload(); }
-        // ---------------------------------------------
 
         function renderCategories() {
             const select = document.getElementById('catSelect');
             select.innerHTML = CATEGORIES.map(c => `<option value="${c}">${c}</option>`).join('');
-            document.getElementById('categoryFilters').innerHTML = ['Tutti', ...CATEGORIES].map(c => 
-                `<button onclick="setFilter('${c}')" id="btn-cat-${c}" class="px-4 py-1.5 rounded-full text-xs font-medium whitespace-nowrap border transition-all ${c === 'Tutti' ? 'bg-gray-800 text-white border-gray-800' : 'bg-white text-gray-600 border-gray-200'}">${c}</button>`
-            ).join('');
+            document.getElementById('categoryFilters').innerHTML = ['Tutti', ...CATEGORIES].map(c => `<button onclick="setFilter('${c}')" id="btn-cat-${c}" class="px-4 py-1.5 rounded-full text-xs font-medium whitespace-nowrap border transition-all ${c === 'Tutti' ? 'bg-gray-800 text-white border-gray-800' : 'bg-white text-gray-600 border-gray-200'}">${c}</button>`).join('');
         }
 
         function enableDragScroll() {
@@ -432,12 +350,13 @@
             document.getElementById(id + 'Section').classList.remove('hidden');
             const stickyFilters = document.getElementById('stickyFilters');
             if (id === 'list') stickyFilters.classList.remove('hidden'); else stickyFilters.classList.add('hidden');
-            document.getElementById('nav-list').className = "flex flex-col items-center justify-center w-full h-full text-blue-600 opacity-50 hover:opacity-100";
-            document.getElementById('nav-add').className = "flex flex-col items-center justify-center w-full h-full text-blue-600 opacity-50 hover:opacity-100";
+            
+            // Reset Nav
             document.getElementById('nav-list').className = "flex flex-col items-center justify-center w-full h-full text-gray-400 hover:text-blue-500";
             document.getElementById('nav-add').className = "flex flex-col items-center justify-center w-full h-full text-gray-400 hover:text-blue-500";
             const addIconDiv = document.querySelector('#nav-add div');
             addIconDiv.className = "bg-blue-600 text-white rounded-full w-10 h-10 flex items-center justify-center shadow-lg -mt-6 border-4 border-white transition";
+
             if (id === 'list') document.getElementById('nav-list').className = "flex flex-col items-center justify-center w-full h-full text-blue-600";
             if (id === 'add') {
                 document.getElementById('nav-add').classList.add('text-blue-600');
@@ -460,33 +379,17 @@
         }
 
         function openViewMap(lat, lng, title) {
-            currentViewLat = lat;
-            currentViewLng = lng;
-            document.getElementById('viewMapTitle').innerText = title;
-            document.getElementById('viewMapModal').classList.remove('hidden');
+            currentViewLat = lat; currentViewLng = lng; document.getElementById('viewMapTitle').innerText = title; document.getElementById('viewMapModal').classList.remove('hidden');
             setTimeout(() => {
-                if (!viewMapInstance) {
-                    viewMapInstance = L.map('viewMap').setView([lat, lng], 15);
-                    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap' }).addTo(viewMapInstance);
-                } else {
-                    viewMapInstance.setView([lat, lng], 15);
-                }
-                viewMapInstance.eachLayer((layer) => { if (layer instanceof L.Marker) viewMapInstance.removeLayer(layer); });
-                L.marker([lat, lng]).addTo(viewMapInstance);
-                viewMapInstance.invalidateSize();
+                if (!viewMapInstance) { viewMapInstance = L.map('viewMap').setView([lat, lng], 15); L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap' }).addTo(viewMapInstance); } else { viewMapInstance.setView([lat, lng], 15); }
+                viewMapInstance.eachLayer((layer) => { if (layer instanceof L.Marker) viewMapInstance.removeLayer(layer); }); L.marker([lat, lng]).addTo(viewMapInstance); viewMapInstance.invalidateSize();
             }, 200);
         }
         function closeViewMap() { document.getElementById('viewMapModal').classList.add('hidden'); }
         function openExternalMap() { window.open(`https://www.google.com/maps/search/?api=1&query=${currentViewLat},${currentViewLng}`, '_blank'); }
 
-        function openImageModal(url) {
-            document.getElementById('fullScreenImage').src = url;
-            document.getElementById('viewImageModal').classList.remove('hidden');
-        }
-        function closeImageModal() {
-            document.getElementById('viewImageModal').classList.add('hidden');
-            setTimeout(() => { document.getElementById('fullScreenImage').src = ''; }, 200);
-        }
+        function openImageModal(url) { document.getElementById('fullScreenImage').src = url; document.getElementById('viewImageModal').classList.remove('hidden'); }
+        function closeImageModal() { document.getElementById('viewImageModal').classList.add('hidden'); setTimeout(() => { document.getElementById('fullScreenImage').src = ''; }, 200); }
 
         async function loadItems() {
             const container = document.getElementById('itemsContainer');
@@ -499,7 +402,7 @@
             if (error) { container.innerHTML = `<p class="text-red-500 text-center text-sm">Errore: ${error.message}</p>`; return; }
             if (items.length === 0) { container.innerHTML = `<div class="text-center py-16 flex flex-col items-center"><div class="bg-gray-200 p-4 rounded-full mb-3 text-3xl">📭</div><p class="text-gray-500 font-medium">Nessun oggetto trovato</p></div>`; return; }
             
-            const itemsHtml = items.map(item => {
+            container.innerHTML = items.map(item => {
                 const isOwner = currentUser && currentUser.id === item.user_id;
                 const canDelete = isOwner || isAdmin;
                 const isRitrovato = item.stato === 'ritrovato';
@@ -507,7 +410,6 @@
                 const badge = isRitrovato ? `<span class="bg-green-600 text-white text-[10px] px-2 py-0.5 rounded font-bold uppercase tracking-wider">RITROVATO ✅</span>` : `<span class="bg-blue-50 text-blue-700 text-[10px] px-2 py-0.5 rounded font-bold uppercase tracking-wider">${item.categoria || 'Altro'}</span>`;
                 const showContact = !isOwner && currentUser && isAuthorized && !isRitrovato;
                 const safeTitle = item.titolo.replace(/'/g, "\\'");
-
                 return `
                 <div class="${cardClass}">
                     <div class="w-24 h-24 shrink-0 rounded-lg bg-gray-100 overflow-hidden relative cursor-pointer" ${item.foto_url ? `onclick="openImageModal('${item.foto_url}')"` : ''}>
@@ -515,10 +417,7 @@
                     </div>
                     <div class="flex-1 min-w-0 flex flex-col justify-between">
                         <div>
-                            <div class="flex justify-between items-start mb-1">
-                                ${badge}
-                                <span class="text-[10px] text-gray-400">${new Date(item.created_at).toLocaleDateString()}</span>
-                            </div>
+                            <div class="flex justify-between items-start mb-1">${badge}<span class="text-[10px] text-gray-400">${new Date(item.created_at).toLocaleDateString()}</span></div>
                             <h3 class="font-bold text-gray-800 text-base leading-tight mb-1 truncate">${item.titolo}</h3>
                             <p class="text-gray-500 text-xs line-clamp-2 leading-relaxed">${item.descrizione}</p>
                         </div>
@@ -535,8 +434,6 @@
                     </div>
                 </div>
             `}).join('');
-
-            container.innerHTML = itemsHtml;
         }
 
         async function toggleStatus(itemId, newStatus) {
@@ -619,10 +516,7 @@
             if(!confirm("Sei sicuro?")) return; 
             const { data: item } = await supabase.from('oggetti_smarriti').select('foto_url').eq('id', id).single();
             if (item && item.foto_url) {
-                try {
-                    const fileName = item.foto_url.split('/').pop();
-                    await supabase.storage.from(BUCKET_NAME).remove([fileName]);
-                } catch (err) { console.error("Errore cancellazione foto:", err); }
+                try { const fileName = item.foto_url.split('/').pop(); await supabase.storage.from(BUCKET_NAME).remove([fileName]); } catch (err) { console.error("Errore cancellazione foto:", err); }
             }
             await supabase.from('oggetti_smarriti').delete().eq('id', id);
             loadItems(); 
@@ -632,13 +526,10 @@
         async function checkUser() {
             const { data: { session } } = await supabase.auth.getSession();
             currentUser = session?.user;
-            const loginBtn = document.getElementById('loginBtn');
-            const logoutBtn = document.getElementById('logoutBtn');
-            const inboxBtn = document.getElementById('inboxBtn');
-            const addForm = document.getElementById('addForm');
-            const loginWarning = document.getElementById('loginWarning');
-            const pendingAlert = document.getElementById('pendingAlert');
-            const navAdmin = document.getElementById('nav-admin');
+            
+            // UI Elements
+            const loginBtn = document.getElementById('loginBtn'); const logoutBtn = document.getElementById('logoutBtn'); const inboxBtn = document.getElementById('inboxBtn');
+            const addForm = document.getElementById('addForm'); const loginWarning = document.getElementById('loginWarning'); const pendingAlert = document.getElementById('pendingAlert'); const navAdmin = document.getElementById('nav-admin');
 
             if (currentUser) {
                 const { data: profile } = await supabase.from('profiles').select('*').eq('id', currentUser.id).single();
@@ -647,52 +538,61 @@
                 isAuthorized = profile?.is_authorized || false;
                 isSuperAdmin = profile?.is_super_admin || false;
 
-                loginBtn.classList.add('hidden');
-                logoutBtn.classList.remove('hidden');
+                loginBtn.classList.add('hidden'); logoutBtn.classList.remove('hidden');
                 if (isAuthorized) {
-                    pendingAlert.classList.add('hidden');
-                    addForm.classList.remove('hidden');
-                    loginWarning.classList.add('hidden');
-                    inboxBtn.classList.remove('hidden');
+                    pendingAlert.classList.add('hidden'); addForm.classList.remove('hidden'); loginWarning.classList.add('hidden'); inboxBtn.classList.remove('hidden');
                     if (isAdmin) navAdmin.classList.remove('hidden');
                 } else {
-                    pendingAlert.classList.remove('hidden');
-                    addForm.classList.add('hidden');
-                    loginWarning.classList.remove('hidden');
+                    pendingAlert.classList.remove('hidden'); addForm.classList.add('hidden'); loginWarning.classList.remove('hidden');
                     document.getElementById('warningText').innerText = "Il tuo account è in attesa di approvazione.";
-                    document.getElementById('warningBtn').classList.add('hidden'); 
-                    inboxBtn.classList.add('hidden');
-                    navAdmin.classList.add('hidden');
+                    document.getElementById('warningBtn').classList.add('hidden'); inboxBtn.classList.add('hidden'); navAdmin.classList.add('hidden');
                 }
             } else {
-                loginBtn.classList.remove('hidden');
-                logoutBtn.classList.add('hidden');
-                inboxBtn.classList.add('hidden');
-                pendingAlert.classList.add('hidden');
-                addForm.classList.add('hidden');
-                loginWarning.classList.remove('hidden');
+                loginBtn.classList.remove('hidden'); logoutBtn.classList.add('hidden'); inboxBtn.classList.add('hidden'); pendingAlert.classList.add('hidden');
+                addForm.classList.add('hidden'); loginWarning.classList.remove('hidden');
                 document.getElementById('warningText').innerText = "Accedi per segnalare un oggetto.";
-                document.getElementById('warningBtn').classList.remove('hidden');
-                navAdmin.classList.add('hidden');
+                document.getElementById('warningBtn').classList.remove('hidden'); navAdmin.classList.add('hidden');
             }
         }
 
         function copyAndGoToFb() { const text = document.getElementById('fbText'); navigator.clipboard.writeText(text.value).then(() => window.open(FB_GROUP_URL, '_blank')).catch(() => { text.select(); document.execCommand("copy"); window.open(FB_GROUP_URL, '_blank'); }); document.getElementById('fbModal').classList.add('hidden'); }
         function showToast(msg) { const toast = document.getElementById("toast"); toast.innerText = msg; toast.className = "show"; setTimeout(() => toast.className = toast.className.replace("show", ""), 3000); }
 
+        // --- NUOVA LOGICA ADMIN (Cache + Ricerca) ---
         async function loadAdminPanel() {
-            const container = document.getElementById('adminList'); container.innerHTML = "Caricamento...";
-            const { data: users } = await supabase.from('profiles').select('*').order('created_at', {ascending: false});
-            const { data: foundItems } = await supabase.from('oggetti_smarriti').select('*, profiles(email)').eq('stato', 'ritrovato');
+            const container = document.getElementById('adminList'); 
+            container.innerHTML = '<div class="text-center"><div class="loader ease-linear rounded-full border-4 border-t-4 border-gray-200 h-8 w-8 mx-auto"></div></div>';
+            
+            // Fetch Dati (Una volta sola)
+            const [usersRes, itemsRes] = await Promise.all([
+                 supabase.from('profiles').select('*').order('email', {ascending: true}), // Ordina per email
+                 supabase.from('oggetti_smarriti').select('*, profiles(email)').eq('stato', 'ritrovato')
+            ]);
 
-            if(!users) return;
-            const pending = users.filter(u => !u.is_authorized);
-            const approved = users.filter(u => u.is_authorized);
-            let html = "";
+            if (usersRes.error || itemsRes.error) { container.innerHTML = "Errore caricamento dati."; return; }
 
-            if (foundItems && foundItems.length > 0) {
-                html += `<h3 class="text-sm font-bold text-green-600 uppercase mt-2 mb-1">Oggetti Ritrovati (Da Cancellare?)</h3>`;
-                html += foundItems.map(item => `
+            adminUsersCache = usersRes.data;
+            adminFoundItemsCache = itemsRes.data;
+
+            renderAdminList(); // Renderizza la lista
+        }
+
+        function renderAdminList() {
+             const searchTerm = document.getElementById('adminSearch').value.toLowerCase();
+             const container = document.getElementById('adminList');
+             
+             // Filtra utenti
+             const filteredUsers = adminUsersCache.filter(u => u.email.toLowerCase().includes(searchTerm));
+             
+             const pending = filteredUsers.filter(u => !u.is_authorized);
+             const approved = filteredUsers.filter(u => u.is_authorized);
+             
+             let html = "";
+
+             // 1. Oggetti Ritrovati (Mostrati sempre se presenti, non filtrati dalla ricerca utente per semplicità)
+             if (adminFoundItemsCache.length > 0) {
+                 html += `<h3 class="text-sm font-bold text-green-600 uppercase mt-2 mb-1">Oggetti Ritrovati (Da Cancellare?)</h3>`;
+                 html += adminFoundItemsCache.map(item => `
                     <div class="bg-green-50 p-2 border border-green-200 rounded mb-2 text-xs">
                         <div class="flex justify-between font-bold mb-1">
                             <span>${item.titolo}</span>
@@ -704,48 +604,58 @@
                             <button onclick="deleteItem(${item.id})" class="text-red-600 underline bg-white px-2 py-1 rounded border shadow-sm">🗑️ Elimina</button>
                         </div>
                     </div>
-                `).join('');
-                html += `<hr class="my-4 border-gray-300">`;
-            }
+                 `).join('');
+                 html += `<hr class="my-4 border-gray-300">`;
+             }
 
-            if(pending.length > 0) {
-                html += `<h3 class="text-sm font-bold text-yellow-600 uppercase mt-2 mb-1">Utenti Da Approvare (${pending.length})</h3>`;
+             // 2. Utenti Pending
+             if(pending.length > 0) {
+                html += `<h3 class="text-sm font-bold text-yellow-600 uppercase mt-2 mb-1">Da Approvare (${pending.length})</h3>`;
                 html += pending.map(p => `
                     <div class="bg-yellow-50 p-3 rounded border border-yellow-200 mb-2 flex justify-between items-center">
                         <div class="text-xs truncate w-1/2 font-medium">${p.email}</div>
                         <button onclick="authorizeUser('${p.id}')" class="bg-green-500 text-white px-3 py-1 rounded text-xs font-bold shadow">✅ Autorizza</button>
                     </div>
                 `).join('');
-            } else { html += `<p class="text-xs text-gray-400 italic mb-4">Nessun utente in attesa.</p>`; }
+             } else if (!searchTerm) {
+                 html += `<p class="text-xs text-gray-400 italic mb-4">Nessun utente in attesa.</p>`;
+             }
 
-            html += `<h3 class="text-sm font-bold text-gray-600 uppercase mt-4 mb-1">Utenti Attivi</h3>`;
-            html += approved.map(p => {
-                const isMe = p.id === currentUser.id;
-                const targetIsSuperAdmin = p.is_super_admin; 
-                let badge = "";
-                if (p.is_admin) badge = "<span class='text-blue-600 font-bold text-[10px]'>ADMIN</span>";
-                if (targetIsSuperAdmin) badge = "<span class='text-purple-600 font-bold text-[10px] ml-1'>👑 SUPER</span>";
-                const showActions = !isMe && !targetIsSuperAdmin;
-                return `
-                <div class="p-2 border-b flex justify-between items-center">
-                    <span class="text-xs truncate w-1/2 flex items-center gap-1">${p.email} ${badge}</span>
-                    <div class="flex gap-2">
-                        ${showActions ? (
-                            !p.is_admin ? 
-                            `<button onclick="toggleAdmin('${p.id}', true)" class="text-xs text-blue-600 underline">👮 Nomina</button>` : 
-                            `<button onclick="toggleAdmin('${p.id}', false)" class="text-xs text-gray-400 underline">Rimuovi</button>`
-                        ) : ''}
-                        ${showActions ? `<button onclick="toggleBan('${p.id}', ${!p.is_banned})" class="text-xs underline ${p.is_banned ? 'text-green-600' : 'text-red-500'}">${p.is_banned ? 'Riammetti' : 'Banna'}</button>` : ''}
+             // 3. Utenti Attivi
+             html += `<h3 class="text-sm font-bold text-gray-600 uppercase mt-4 mb-1">Utenti Attivi (${approved.length})</h3>`;
+             if(approved.length === 0) {
+                 html += `<p class="text-xs text-gray-500 italic">Nessun utente trovato.</p>`;
+             } else {
+                 html += approved.map(p => {
+                    const isMe = p.id === currentUser.id;
+                    const targetIsSuperAdmin = p.is_super_admin; 
+                    let badge = "";
+                    if (p.is_admin) badge = "<span class='text-blue-600 font-bold text-[10px]'>ADMIN</span>";
+                    if (targetIsSuperAdmin) badge = "<span class='text-purple-600 font-bold text-[10px] ml-1'>👑 SUPER</span>";
+                    const showActions = !isMe && !targetIsSuperAdmin;
+                    return `
+                    <div class="p-2 border-b flex justify-between items-center">
+                        <span class="text-xs truncate w-1/2 flex items-center gap-1">${p.email} ${badge}</span>
+                        <div class="flex gap-2">
+                            ${showActions ? (
+                                !p.is_admin ? 
+                                `<button onclick="toggleAdmin('${p.id}', true)" class="text-xs text-blue-600 underline">👮 Nomina</button>` : 
+                                `<button onclick="toggleAdmin('${p.id}', false)" class="text-xs text-gray-400 underline">Rimuovi</button>`
+                            ) : ''}
+                            ${showActions ? `<button onclick="toggleBan('${p.id}', ${!p.is_banned})" class="text-xs underline ${p.is_banned ? 'text-green-600' : 'text-red-500'}">${p.is_banned ? 'Riammetti' : 'Banna'}</button>` : ''}
+                        </div>
                     </div>
-                </div>
-            `}).join('');
-            container.innerHTML = html;
+                `}).join('');
+             }
+
+             container.innerHTML = html;
         }
+        // -----------------------------------------
 
         async function authorizeUser(userId) {
             if(!confirm("Autorizzare questo utente?")) return;
             await supabase.from('profiles').update({ is_authorized: true }).eq('id', userId);
-            loadAdminPanel();
+            loadAdminPanel(); // Ricarica tutto per aggiornare lo stato
             showToast("Utente autorizzato!");
         }
 
