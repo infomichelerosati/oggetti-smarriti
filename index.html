@@ -12,60 +12,40 @@
     <script src="https://cdn.jsdelivr.net/npm/browser-image-compression@2.0.0/dist/browser-image-compression.js"></script>
 
     <style>
-        /* Layout Mobile Full Height */
         body { height: 100vh; height: 100dvh; overflow: hidden; display: flex; flex-direction: column; }
-        
-        /* Mappa e Loader */
         #map { height: 250px; width: 100%; border-radius: 0.5rem; margin-bottom: 1rem; z-index: 1; }
         .loader { border-top-color: #3498db; -webkit-animation: spinner 1.5s linear infinite; animation: spinner 1.5s linear infinite; }
         @keyframes spinner { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        
-        /* Toast */
-        #toast {
-            visibility: hidden; min-width: 250px; background-color: #333; color: #fff; text-align: center;
-            border-radius: 4px; padding: 16px; position: fixed; z-index: 100; left: 50%; bottom: 90px;
-            transform: translateX(-50%); font-size: 17px; opacity: 0; transition: opacity 0.3s, bottom 0.3s;
-        }
+        #toast { visibility: hidden; min-width: 250px; background-color: #333; color: #fff; text-align: center; border-radius: 4px; padding: 16px; position: fixed; z-index: 100; left: 50%; bottom: 90px; transform: translateX(-50%); font-size: 17px; opacity: 0; transition: opacity 0.3s, bottom 0.3s; }
         #toast.show { visibility: visible; opacity: 1; bottom: 110px; }
-
-        /* Categorie Scrollabili */
         .hide-scroll::-webkit-scrollbar { display: none; }
         .hide-scroll { -ms-overflow-style: none; scrollbar-width: none; cursor: grab; }
         .hide-scroll:active { cursor: grabbing; }
-
-        /* Badge Notifiche */
-        .notification-badge {
-            position: absolute; top: -5px; right: -5px; background-color: red; color: white;
-            border-radius: 50%; padding: 2px 6px; font-size: 10px; font-weight: bold; display: none;
-        }
-
-        /* Stile Ritrovato */
-        .item-ritrovato {
-            background-color: #f0fdf4; /* Verde chiarissimo */
-            border: 2px solid #4ade80; /* Bordo verde */
-            opacity: 0.8;
-        }
+        .notification-badge { position: absolute; top: -5px; right: -5px; background-color: red; color: white; border-radius: 50%; padding: 2px 6px; font-size: 10px; font-weight: bold; display: none; }
+        .item-ritrovato { background-color: #f0fdf4; border: 2px solid #4ade80; opacity: 0.8; }
     </style>
 </head>
 <body class="bg-gray-50 text-gray-800 font-sans">
 
-    <!-- 1. HEADER FISSO -->
+    <!-- HEADER -->
     <header class="bg-blue-600 text-white p-4 flex justify-between items-center shadow-md shrink-0 z-50">
         <div class="flex items-center gap-2">
             <span class="text-2xl">🔍</span>
             <h1 class="font-bold text-lg leading-none">Grosseto<br><span class="text-blue-200 text-sm font-normal">Oggetti Smarriti</span></h1>
         </div>
         <div class="flex gap-3 items-center">
-            <button id="inboxBtn" onclick="showInbox()" class="relative hidden text-2xl">
-                🔔
-                <span id="msgBadge" class="notification-badge">0</span>
-            </button>
+            <button id="inboxBtn" onclick="showInbox()" class="relative hidden text-2xl">🔔<span id="msgBadge" class="notification-badge">0</span></button>
             <button id="loginBtn" onclick="login()" class="text-xs bg-white text-blue-600 px-3 py-1.5 rounded font-bold hidden shadow">ACCEDI</button>
             <button id="logoutBtn" onclick="logout()" class="text-xs bg-blue-800 text-white px-3 py-1.5 rounded hidden">ESCI</button>
         </div>
     </header>
 
-    <!-- 2. FILTRI STICKY -->
+    <!-- PENDING ALERT (Visibile solo se non autorizzato) -->
+    <div id="pendingAlert" class="hidden bg-yellow-100 border-b border-yellow-200 p-3 text-center text-yellow-800 text-sm font-medium">
+        ⏳ Account in attesa di approvazione.<br>Non puoi ancora pubblicare o inviare messaggi.
+    </div>
+
+    <!-- FILTRI -->
     <div id="stickyFilters" class="bg-white border-b p-3 shrink-0 z-40 shadow-sm">
         <div class="relative mb-3">
             <input type="text" id="searchBar" onkeyup="loadItems()" placeholder="Cerca oggetto..." class="w-full bg-gray-100 text-gray-700 p-2 pl-9 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
@@ -74,24 +54,25 @@
         <div class="flex gap-2 overflow-x-auto hide-scroll pb-1 select-none" id="categoryFilters"></div>
     </div>
 
-    <!-- 3. MAIN SCROLL -->
+    <!-- MAIN CONTENT -->
     <main id="mainScroll" class="flex-1 overflow-y-auto p-4 relative bg-gray-100 pb-24">
         
-        <!-- LISTA OGGETTI -->
         <div id="listSection">
             <div id="itemsContainer" class="space-y-3">
                 <p class="text-center text-gray-500 mt-10">Caricamento...</p>
             </div>
         </div>
 
-        <!-- AGGIUNGI OGGETTO -->
         <div id="addSection" class="hidden max-w-lg mx-auto bg-white p-5 rounded-xl shadow-sm">
             <h2 class="text-xl font-bold mb-1">Nuova Segnalazione</h2>
             <p class="text-gray-500 text-sm mb-4">Compila i dati per aiutare la ricerca.</p>
+            
+            <!-- Blocco Add se non loggato o non autorizzato -->
             <div id="loginWarning" class="text-center py-8 hidden bg-blue-50 rounded-lg border border-blue-100">
-                <p class="mb-3 text-blue-800 font-medium">Accedi per segnalare un oggetto.</p>
-                <button onclick="login()" class="bg-blue-600 text-white px-6 py-2 rounded shadow">Login con Google</button>
+                <p id="warningText" class="mb-3 text-blue-800 font-medium">Accedi per segnalare un oggetto.</p>
+                <button id="warningBtn" onclick="login()" class="bg-blue-600 text-white px-6 py-2 rounded shadow">Login con Google</button>
             </div>
+
             <form id="addForm" onsubmit="submitItem(event)">
                 <label class="text-xs font-bold text-gray-500 uppercase mb-1 block">Categoria</label>
                 <div class="relative mb-4">
@@ -111,50 +92,41 @@
             </form>
         </div>
 
-        <!-- INBOX MESSAGGI -->
         <div id="inboxSection" class="hidden max-w-lg mx-auto">
             <h2 class="text-xl font-bold mb-4 text-gray-800">Messaggi Ricevuti</h2>
-            <div id="inboxList" class="space-y-3">
-                <p class="text-gray-500 text-center mt-8">Nessun messaggio.</p>
-            </div>
+            <div id="inboxList" class="space-y-3"><p class="text-gray-500 text-center mt-8">Nessun messaggio.</p></div>
             <button onclick="showSection('list')" class="mt-6 w-full py-3 text-blue-600 font-bold border border-blue-600 rounded-lg">Torna alla Lista</button>
         </div>
 
-        <!-- ADMIN -->
         <div id="adminSection" class="hidden max-w-lg mx-auto">
             <h2 class="text-xl font-bold mb-4 text-gray-800">Amministrazione</h2>
+            <p class="text-xs text-gray-500 mb-4">Gestisci utenti e approvazioni.</p>
             <div id="adminList" class="space-y-2"></div>
         </div>
     </main>
 
-    <!-- 4. BOTTOM NAV BAR -->
+    <!-- NAVBAR -->
     <nav class="bg-white border-t border-gray-200 flex justify-around items-center h-16 shrink-0 pb-safe z-50 safe-area-pb">
         <button onclick="showSection('list')" id="nav-list" class="flex flex-col items-center justify-center w-full h-full text-blue-600">
-            <span class="text-2xl mb-1">📋</span>
-            <span class="text-[10px] font-bold uppercase tracking-wide">Lista</span>
+            <span class="text-2xl mb-1">📋</span><span class="text-[10px] font-bold uppercase tracking-wide">Lista</span>
         </button>
         <button onclick="showSection('add')" id="nav-add" class="flex flex-col items-center justify-center w-full h-full text-gray-400 hover:text-blue-500">
-            <div class="bg-blue-600 text-white rounded-full w-10 h-10 flex items-center justify-center shadow-lg -mt-6 border-4 border-white">
-                <span class="text-2xl font-bold">+</span>
-            </div>
+            <div class="bg-blue-600 text-white rounded-full w-10 h-10 flex items-center justify-center shadow-lg -mt-6 border-4 border-white"><span class="text-2xl font-bold">+</span></div>
             <span class="text-[10px] font-bold uppercase tracking-wide mt-1">Segnala</span>
         </button>
         <button onclick="showSection('admin')" id="nav-admin" class="flex flex-col items-center justify-center w-full h-full text-gray-400 hidden">
-            <span class="text-2xl mb-1">⚙️</span>
-            <span class="text-[10px] font-bold uppercase tracking-wide">Admin</span>
+            <span class="text-2xl mb-1">⚙️</span><span class="text-[10px] font-bold uppercase tracking-wide">Admin</span>
         </button>
     </nav>
 
     <!-- MODALI -->
-    <!-- Modal Scrivi Messaggio -->
     <div id="contactModal" class="fixed inset-0 bg-black bg-opacity-60 hidden flex items-center justify-center z-[100] backdrop-blur-sm p-4">
         <div class="bg-white p-6 rounded-2xl max-w-sm w-full shadow-2xl">
             <h3 class="text-lg font-bold mb-2">Scrivi al proprietario</h3>
-            <p class="text-xs text-gray-500 mb-4">Lascia un tuo contatto (es. telefono o email) per farti richiamare. Massimo 2 messaggi.</p>
-            <textarea id="msgText" class="w-full border p-3 text-sm bg-gray-50 h-24 mb-4 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Ciao, ho trovato il tuo oggetto! Chiamami al..."></textarea>
-            <input type="hidden" id="msgReceiverId">
-            <input type="hidden" id="msgItemId">
-            <button onclick="sendMessage()" class="w-full bg-blue-600 text-white font-bold py-3 rounded-xl mb-2 shadow-md">Invia Messaggio</button>
+            <p class="text-xs text-gray-500 mb-4">Lascia un tuo contatto. Max 2 messaggi.</p>
+            <textarea id="msgText" class="w-full border p-3 text-sm bg-gray-50 h-24 mb-4 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Ciao..."></textarea>
+            <input type="hidden" id="msgReceiverId"><input type="hidden" id="msgItemId">
+            <button onclick="sendMessage()" class="w-full bg-blue-600 text-white font-bold py-3 rounded-xl mb-2 shadow-md">Invia</button>
             <button onclick="closeContactModal()" class="w-full text-gray-500 text-sm py-2">Annulla</button>
         </div>
     </div>
@@ -162,10 +134,10 @@
     <div id="fbModal" class="fixed inset-0 bg-black bg-opacity-60 hidden flex items-center justify-center z-[100] backdrop-blur-sm">
         <div class="bg-white p-6 rounded-2xl max-w-xs w-full mx-4 text-center shadow-2xl">
             <div class="w-12 h-12 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-3 text-2xl">✅</div>
-            <h3 class="text-lg font-bold mb-1">Oggetto Pubblicato!</h3>
-            <p class="text-xs text-gray-500 mb-4">Per massima visibilità, condividi ora sul gruppo Facebook.</p>
+            <h3 class="text-lg font-bold mb-1">Pubblicato!</h3>
+            <p class="text-xs text-gray-500 mb-4">Condividi su Facebook.</p>
             <textarea id="fbText" class="w-full border p-3 text-xs bg-gray-50 h-20 mb-4 rounded-lg resize-none focus:outline-none" readonly></textarea>
-            <button onclick="copyAndGoToFb()" class="w-full bg-blue-600 text-white font-bold py-3 rounded-xl mb-2 shadow-md">Copia e Vai su Facebook</button>
+            <button onclick="copyAndGoToFb()" class="w-full bg-blue-600 text-white font-bold py-3 rounded-xl mb-2 shadow-md">Copia e Vai</button>
             <button onclick="document.getElementById('fbModal').classList.add('hidden')" class="text-gray-400 text-xs py-2">Chiudi</button>
         </div>
     </div>
@@ -173,7 +145,6 @@
     <div id="toast">Messaggio</div>
 
     <script>
-        // --- CONFIGURAZIONE ---
         const SUPABASE_URL = 'https://xgfdlyymbvpdnmomcxhd.supabase.co';
         const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhnZmRseXltYnZwZG5tb21jeGhkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMyMDIzOTgsImV4cCI6MjA3ODc3ODM5OH0.LJB7E--yAm5Nyxti749HVbxskjbURpKGuqK2c2hRBQs'; 
         const FB_GROUP_URL = 'https://www.facebook.com/groups/1636621146667765/';
@@ -181,7 +152,9 @@
         const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
         
         let currentUser = null;
+        let userProfile = null; // Nuovo: salviamo tutto il profilo (admin, authorized, ecc)
         let isAdmin = false;
+        let isAuthorized = false;
         let map, marker;
         const CATEGORIES = ['Chiavi', 'Documenti', 'Elettronica', 'Animali', 'Abbigliamento', 'Gioielli', 'Altro'];
         let currentFilter = 'Tutti';
@@ -193,20 +166,15 @@
             renderCategories();
             enableDragScroll();
             loadItems();
-            if(currentUser) checkMessages();
+            if(currentUser && isAuthorized) checkMessages();
         }
 
-        // --- UI LOGIC ---
         function renderCategories() {
             const select = document.getElementById('catSelect');
             select.innerHTML = CATEGORIES.map(c => `<option value="${c}">${c}</option>`).join('');
-            const filtersDiv = document.getElementById('categoryFilters');
-            filtersDiv.innerHTML = ['Tutti', ...CATEGORIES].map(c => `
-                <button onclick="setFilter('${c}')" id="btn-cat-${c}"
-                    class="px-4 py-1.5 rounded-full text-xs font-medium whitespace-nowrap border transition-all ${c === 'Tutti' ? 'bg-gray-800 text-white border-gray-800' : 'bg-white text-gray-600 border-gray-200'}">
-                    ${c}
-                </button>
-            `).join('');
+            document.getElementById('categoryFilters').innerHTML = ['Tutti', ...CATEGORIES].map(c => 
+                `<button onclick="setFilter('${c}')" id="btn-cat-${c}" class="px-4 py-1.5 rounded-full text-xs font-medium whitespace-nowrap border transition-all ${c === 'Tutti' ? 'bg-gray-800 text-white border-gray-800' : 'bg-white text-gray-600 border-gray-200'}">${c}</button>`
+            ).join('');
         }
 
         function enableDragScroll() {
@@ -234,7 +202,6 @@
 
             document.getElementById('nav-list').className = "flex flex-col items-center justify-center w-full h-full text-gray-400 hover:text-blue-500";
             document.getElementById('nav-add').className = "flex flex-col items-center justify-center w-full h-full text-gray-400 hover:text-blue-500";
-            
             const addIconDiv = document.querySelector('#nav-add div');
             addIconDiv.className = "bg-blue-600 text-white rounded-full w-10 h-10 flex items-center justify-center shadow-lg -mt-6 border-4 border-white transition";
 
@@ -248,7 +215,6 @@
             if (id === 'inbox') loadInbox();
         }
 
-        // --- MAPPA ---
         function initMap() {
             map = L.map('map').setView([42.7600, 11.1100], 14); 
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap' }).addTo(map);
@@ -260,7 +226,6 @@
             });
         }
 
-        // --- DATA FETCHING ---
         async function loadItems() {
             const container = document.getElementById('itemsContainer');
             const searchTerm = document.getElementById('searchBar').value.toLowerCase();
@@ -272,24 +237,17 @@
 
             const { data: items, error } = await query;
             if (error) { container.innerHTML = `<p class="text-red-500 text-center text-sm">Errore: ${error.message}</p>`; return; }
-            if (items.length === 0) {
-                 container.innerHTML = `<div class="text-center py-16 flex flex-col items-center"><div class="bg-gray-200 p-4 rounded-full mb-3 text-3xl">📭</div><p class="text-gray-500 font-medium">Nessun oggetto trovato</p></div>`;
-                 return;
-            }
+            if (items.length === 0) { container.innerHTML = `<div class="text-center py-16 flex flex-col items-center"><div class="bg-gray-200 p-4 rounded-full mb-3 text-3xl">📭</div><p class="text-gray-500 font-medium">Nessun oggetto trovato</p></div>`; return; }
 
             container.innerHTML = items.map(item => {
                 const isOwner = currentUser && currentUser.id === item.user_id;
                 const canDelete = isOwner || isAdmin;
-                const isRitrovato = item.stato === 'ritrovato'; // Controllo stato
+                const isRitrovato = item.stato === 'ritrovato';
+                const cardClass = isRitrovato ? "bg-white p-3 rounded-xl shadow-sm border border-green-400 bg-green-50 flex gap-3 opacity-90" : "bg-white p-3 rounded-xl shadow-sm border border-gray-100 flex gap-3";
+                const badge = isRitrovato ? `<span class="bg-green-600 text-white text-[10px] px-2 py-0.5 rounded font-bold uppercase tracking-wider">RITROVATO ✅</span>` : `<span class="bg-blue-50 text-blue-700 text-[10px] px-2 py-0.5 rounded font-bold uppercase tracking-wider">${item.categoria || 'Altro'}</span>`;
 
-                // Se ritrovato, applica classe speciale
-                const cardClass = isRitrovato 
-                    ? "bg-white p-3 rounded-xl shadow-sm border border-green-400 bg-green-50 flex gap-3 opacity-90" 
-                    : "bg-white p-3 rounded-xl shadow-sm border border-gray-100 flex gap-3";
-
-                const badge = isRitrovato
-                    ? `<span class="bg-green-600 text-white text-[10px] px-2 py-0.5 rounded font-bold uppercase tracking-wider">RITROVATO ✅</span>`
-                    : `<span class="bg-blue-50 text-blue-700 text-[10px] px-2 py-0.5 rounded font-bold uppercase tracking-wider">${item.categoria || 'Altro'}</span>`;
+                // Mostra pulsante contatta SOLO se: non sono io, sono loggato, sono autorizzato, non è già ritrovato
+                const showContact = !isOwner && currentUser && isAuthorized && !isRitrovato;
 
                 return `
                 <div class="${cardClass}">
@@ -308,11 +266,8 @@
                         <div class="flex items-center justify-between mt-3 pt-2 border-t border-gray-50">
                             <div class="flex gap-2">
                                 ${item.latitudine ? `<a href="https://www.google.com/maps/search/?api=1&query=${item.latitudine},${item.longitudine}" target="_blank" class="text-gray-500 hover:text-blue-600 text-xs flex items-center gap-1 bg-gray-50 px-2 py-1 rounded border border-gray-100">📍 Mappa</a>` : ''}
-                                
-                                ${(!isOwner && currentUser && !isRitrovato) ? // Nascondi se ritrovato
-                                    `<button onclick="openContactModal('${item.user_id}', '${item.id}')" class="text-blue-600 hover:text-blue-800 text-xs flex items-center gap-1 bg-blue-50 px-2 py-1 rounded border border-blue-100 font-semibold">💬 Contatta</button>` : ''}
+                                ${showContact ? `<button onclick="openContactModal('${item.user_id}', '${item.id}')" class="text-blue-600 hover:text-blue-800 text-xs flex items-center gap-1 bg-blue-50 px-2 py-1 rounded border border-blue-100 font-semibold">💬 Contatta</button>` : ''}
                             </div>
-                            
                             <div class="flex gap-2">
                                 ${(isOwner && !isRitrovato) ? `<button onclick="toggleStatus(${item.id}, 'ritrovato')" class="text-green-600 text-xs font-medium px-2 py-1 hover:bg-green-50 rounded border border-green-100">✅ Trovato!</button>` : ''}
                                 ${canDelete ? `<button onclick="deleteItem(${item.id})" class="text-red-500 text-xs font-medium px-2 py-1 hover:bg-red-50 rounded">🗑️</button>` : ''}
@@ -323,207 +278,189 @@
             `}).join('');
         }
 
-        // --- AZIONI STATO ---
         async function toggleStatus(itemId, newStatus) {
-            if(!confirm("Fantastico! Vuoi segnare questo oggetto come RITROVATO?")) return;
-            
-            const { error } = await supabase
-                .from('oggetti_smarriti')
-                .update({ stato: newStatus })
-                .eq('id', itemId);
-
-            if(error) showToast("Errore: " + error.message);
-            else {
-                showToast("Stato aggiornato!");
-                loadItems();
-            }
+            if(!confirm("Vuoi segnare questo oggetto come RITROVATO?")) return;
+            const { error } = await supabase.from('oggetti_smarriti').update({ stato: newStatus }).eq('id', itemId);
+            if(error) showToast("Errore: " + error.message); else { showToast("Stato aggiornato!"); loadItems(); }
         }
 
-        // --- SISTEMA MESSAGGI ---
         function openContactModal(receiverId, itemId) {
+            if(!isAuthorized) { showToast("Utente non autorizzato."); return; }
             document.getElementById('msgReceiverId').value = receiverId;
             document.getElementById('msgItemId').value = itemId;
             document.getElementById('contactModal').classList.remove('hidden');
         }
-
-        function closeContactModal() {
-            document.getElementById('contactModal').classList.add('hidden');
-            document.getElementById('msgText').value = '';
-        }
+        function closeContactModal() { document.getElementById('contactModal').classList.add('hidden'); document.getElementById('msgText').value = ''; }
 
         async function sendMessage() {
             const receiverId = document.getElementById('msgReceiverId').value;
             const itemId = document.getElementById('msgItemId').value;
             const text = document.getElementById('msgText').value;
-
             if(!text.trim()) { showToast("Scrivi un messaggio!"); return; }
-
-            const { count, error: countError } = await supabase
-                .from('messaggi')
-                .select('*', { count: 'exact', head: true })
-                .eq('item_id', itemId)
-                .eq('sender_id', currentUser.id);
-
-            if (count >= MAX_MESSAGES) {
-                showToast(`Limite raggiunto: max ${MAX_MESSAGES} messaggi per questo annuncio.`);
-                closeContactModal();
-                return;
-            }
-
-            const { error } = await supabase.from('messaggi').insert({
-                item_id: itemId,
-                sender_id: currentUser.id,
-                receiver_id: receiverId,
-                testo: text
-            });
-
-            if(error) showToast("Errore invio: " + error.message);
-            else {
-                showToast("Messaggio inviato!");
-                closeContactModal();
-            }
+            const { count } = await supabase.from('messaggi').select('*', { count: 'exact', head: true }).eq('item_id', itemId).eq('sender_id', currentUser.id);
+            if (count >= MAX_MESSAGES) { showToast(`Limite raggiunto (${MAX_MESSAGES} msg).`); closeContactModal(); return; }
+            const { error } = await supabase.from('messaggi').insert({ item_id: itemId, sender_id: currentUser.id, receiver_id: receiverId, testo: text });
+            if(error) showToast("Errore: " + error.message); else { showToast("Messaggio inviato!"); closeContactModal(); }
         }
 
         async function checkMessages() {
             if(!currentUser) return;
-            const { count, error } = await supabase
-                .from('messaggi')
-                .select('*', { count: 'exact', head: true })
-                .eq('receiver_id', currentUser.id)
-                .eq('letto', false);
-
+            const { count } = await supabase.from('messaggi').select('*', { count: 'exact', head: true }).eq('receiver_id', currentUser.id).eq('letto', false);
             const badge = document.getElementById('msgBadge');
-            if(count > 0) {
-                badge.innerText = count;
-                badge.style.display = 'block';
-            } else {
-                badge.style.display = 'none';
-            }
+            if(count > 0) { badge.innerText = count; badge.style.display = 'block'; } else { badge.style.display = 'none'; }
         }
 
         async function loadInbox() {
-            const container = document.getElementById('inboxList');
-            container.innerHTML = "Caricamento messaggi...";
-            const { data: messaggi, error } = await supabase
-                .from('messaggi')
-                .select(`*, oggetti_smarriti(titolo)`)
-                .eq('receiver_id', currentUser.id)
-                .order('created_at', { ascending: false });
-
-            if(error) { container.innerHTML = "Errore caricamento messaggi."; return; }
-            if(messaggi.length === 0) { container.innerHTML = `<p class="text-center text-gray-500 mt-10">Nessun messaggio ricevuto.</p>`; return; }
-
+            if (!isAuthorized) return;
+            const container = document.getElementById('inboxList'); container.innerHTML = "Caricamento...";
+            const { data: messaggi, error } = await supabase.from('messaggi').select(`*, oggetti_smarriti(titolo)`).eq('receiver_id', currentUser.id).order('created_at', { ascending: false });
+            if(error) { container.innerHTML = "Errore."; return; }
+            if(messaggi.length === 0) { container.innerHTML = `<p class="text-center text-gray-500 mt-10">Nessun messaggio.</p>`; return; }
             container.innerHTML = messaggi.map(msg => `
                 <div class="bg-white p-4 rounded-lg shadow-sm border border-gray-200 ${!msg.letto ? 'border-l-4 border-l-blue-500' : ''}">
-                    <div class="flex justify-between mb-2">
-                        <span class="font-bold text-xs uppercase text-gray-500">Rif: ${msg.oggetti_smarriti?.titolo || 'Oggetto eliminato'}</span>
-                        <span class="text-[10px] text-gray-400">${new Date(msg.created_at).toLocaleDateString()}</span>
-                    </div>
+                    <div class="flex justify-between mb-2"><span class="font-bold text-xs uppercase text-gray-500">Rif: ${msg.oggetti_smarriti?.titolo || 'Oggetto eliminato'}</span><span class="text-[10px] text-gray-400">${new Date(msg.created_at).toLocaleDateString()}</span></div>
                     <p class="text-sm text-gray-800 mb-3 bg-gray-50 p-2 rounded">${msg.testo}</p>
-                    ${!msg.letto ? `<button onclick="markAsRead(${msg.id})" class="text-xs text-blue-600 underline">Segna come letto</button>` : '<span class="text-xs text-green-600">Letto</span>'}
+                    ${!msg.letto ? `<button onclick="markAsRead(${msg.id})" class="text-xs text-blue-600 underline">Segna letto</button>` : '<span class="text-xs text-green-600">Letto</span>'}
                 </div>
             `).join('');
         }
+        async function markAsRead(msgId) { await supabase.from('messaggi').update({ letto: true }).eq('id', msgId); checkMessages(); loadInbox(); }
+        function showInbox() { if(!isAuthorized) return; showSection('inbox'); }
 
-        async function markAsRead(msgId) {
-            await supabase.from('messaggi').update({ letto: true }).eq('id', msgId);
-            checkMessages(); // Aggiorna badge
-            loadInbox(); // Ricarica lista
-        }
-
-        function showInbox() {
-            showSection('inbox');
-        }
-
-        // --- ACTIONS ---
         async function submitItem(e) {
             e.preventDefault();
-            const btn = document.getElementById('submitBtn');
-            btn.innerHTML = "⏳ Caricamento..."; btn.disabled = true;
-            const title = document.getElementById('title').value;
-            const desc = document.getElementById('desc').value;
-            const cat = document.getElementById('catSelect').value;
-            const lat = document.getElementById('lat').value;
-            const lng = document.getElementById('lng').value;
-            const fileInput = document.getElementById('photo');
+            if (!isAuthorized) { showToast("Attendi approvazione admin."); return; }
+            const btn = document.getElementById('submitBtn'); btn.innerHTML = "⏳ Caricamento..."; btn.disabled = true;
+            const title = document.getElementById('title').value; const desc = document.getElementById('desc').value; const cat = document.getElementById('catSelect').value; const lat = document.getElementById('lat').value; const lng = document.getElementById('lng').value; const fileInput = document.getElementById('photo');
             let publicUrl = null;
-
             if (fileInput.files.length > 0) {
                 try {
-                    const imageFile = fileInput.files[0];
-                    const compressedFile = await imageCompression(imageFile, { maxSizeMB: 0.5, maxWidthOrHeight: 1024 });
+                    const imageFile = fileInput.files[0]; const compressedFile = await imageCompression(imageFile, { maxSizeMB: 0.5, maxWidthOrHeight: 1024 });
                     const fileName = `${Date.now()}_${Math.random().toString(36).substring(7)}`;
                     const { error } = await supabase.storage.from(BUCKET_NAME).upload(fileName, compressedFile);
-                    if (error) throw error;
-                    const { data: urlData } = supabase.storage.from(BUCKET_NAME).getPublicUrl(fileName);
-                    publicUrl = urlData.publicUrl;
+                    if (error) throw error; const { data: urlData } = supabase.storage.from(BUCKET_NAME).getPublicUrl(fileName); publicUrl = urlData.publicUrl;
                 } catch (err) { showToast("Errore foto: " + err.message); btn.innerText = "RIPROVA"; btn.disabled = false; return; }
             }
-
-            const { error } = await supabase.from('oggetti_smarriti').insert({
-                titolo: title, descrizione: desc, categoria: cat,
-                latitudine: lat || null, longitudine: lng || null, foto_url: publicUrl, stato: 'attivo'
-            });
-
-            if (error) showToast("Errore: " + error.message);
-            else {
-                document.getElementById('fbText').value = `🔍 SMARRITO/RITROVATO: ${cat.toUpperCase()}\nCosa: ${title}\nInfo: ${desc}\n\nVedi dettagli: ${window.location.href}`;
-                document.getElementById('fbModal').classList.remove('hidden');
-                e.target.reset();
-                if(marker) map.removeLayer(marker);
-                showSection('list');
-                loadItems();
-            }
+            const { error } = await supabase.from('oggetti_smarriti').insert({ titolo: title, descrizione: desc, categoria: cat, latitudine: lat || null, longitudine: lng || null, foto_url: publicUrl, stato: 'attivo' });
+            if (error) showToast("Errore: " + error.message); else { document.getElementById('fbText').value = `🔍 SMARRITO/RITROVATO: ${cat.toUpperCase()}\nCosa: ${title}\nInfo: ${desc}\n\nVedi dettagli: ${window.location.href}`; document.getElementById('fbModal').classList.remove('hidden'); e.target.reset(); if(marker) map.removeLayer(marker); showSection('list'); loadItems(); }
             btn.innerText = "PUBBLICA"; btn.disabled = false;
         }
 
-        async function deleteItem(id) {
-             if(!confirm("Sei sicuro?")) return; 
-            await supabase.from('oggetti_smarriti').delete().eq('id', id);
-            loadItems();
-            showToast("Oggetto rimosso!");
-        }
+        async function deleteItem(id) { if(!confirm("Sei sicuro?")) return; await supabase.from('oggetti_smarriti').delete().eq('id', id); loadItems(); showToast("Rimosso!"); }
 
-        // --- AUTH ---
+        // --- AUTH & CHECK APPROVAZIONE ---
         async function checkUser() {
             const { data: { session } } = await supabase.auth.getSession();
             currentUser = session?.user;
+            
+            const loginBtn = document.getElementById('loginBtn');
+            const logoutBtn = document.getElementById('logoutBtn');
+            const inboxBtn = document.getElementById('inboxBtn');
+            const addForm = document.getElementById('addForm');
+            const loginWarning = document.getElementById('loginWarning');
+            const pendingAlert = document.getElementById('pendingAlert');
+            const navAdmin = document.getElementById('nav-admin');
+
             if (currentUser) {
-                document.getElementById('loginBtn').classList.add('hidden');
-                document.getElementById('logoutBtn').classList.remove('hidden');
-                document.getElementById('addForm').classList.remove('hidden');
-                document.getElementById('loginWarning').classList.add('hidden');
-                document.getElementById('inboxBtn').classList.remove('hidden'); // Mostra campanella
-                const { data } = await supabase.rpc('am_i_admin');
-                if (data === true) { isAdmin = true; document.getElementById('nav-admin').classList.remove('hidden'); }
+                // Leggo il profilo completo
+                const { data: profile } = await supabase.from('profiles').select('*').eq('id', currentUser.id).single();
+                userProfile = profile;
+                isAdmin = profile?.is_admin || false;
+                isAuthorized = profile?.is_authorized || false;
+
+                loginBtn.classList.add('hidden');
+                logoutBtn.classList.remove('hidden');
+
+                if (isAuthorized) {
+                    // Utente OK
+                    pendingAlert.classList.add('hidden');
+                    addForm.classList.remove('hidden');
+                    loginWarning.classList.add('hidden');
+                    inboxBtn.classList.remove('hidden');
+                    if (isAdmin) navAdmin.classList.remove('hidden');
+                } else {
+                    // Utente IN ATTESA
+                    pendingAlert.classList.remove('hidden');
+                    addForm.classList.add('hidden');
+                    loginWarning.classList.remove('hidden');
+                    document.getElementById('warningText').innerText = "Il tuo account è in attesa di approvazione.";
+                    document.getElementById('warningBtn').classList.add('hidden'); // Nascondi tasto login, è già loggato
+                    inboxBtn.classList.add('hidden');
+                    navAdmin.classList.add('hidden');
+                }
+
             } else {
-                document.getElementById('loginBtn').classList.remove('hidden');
-                document.getElementById('logoutBtn').classList.add('hidden');
-                document.getElementById('addForm').classList.add('hidden');
-                document.getElementById('loginWarning').classList.remove('hidden');
-                document.getElementById('inboxBtn').classList.add('hidden');
+                // Non loggato
+                loginBtn.classList.remove('hidden');
+                logoutBtn.classList.add('hidden');
+                inboxBtn.classList.add('hidden');
+                pendingAlert.classList.add('hidden');
+                
+                addForm.classList.add('hidden');
+                loginWarning.classList.remove('hidden');
+                document.getElementById('warningText').innerText = "Accedi per segnalare un oggetto.";
+                document.getElementById('warningBtn').classList.remove('hidden');
+                navAdmin.classList.add('hidden');
             }
         }
-        async function login() {
-            const redirectUrl = 'https://infomichelerosati.github.io/oggetti-smarriti/'; 
-            await supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: redirectUrl } });
-        }
+
+        async function login() { const redirectUrl = 'https://infomichelerosati.github.io/oggetti-smarriti/'; await supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: redirectUrl } }); }
         async function logout() { await supabase.auth.signOut(); window.location.reload(); }
-        function copyAndGoToFb() {
-            const text = document.getElementById('fbText');
-            navigator.clipboard.writeText(text.value).then(() => window.open(FB_GROUP_URL, '_blank')).catch(() => { text.select(); document.execCommand("copy"); window.open(FB_GROUP_URL, '_blank'); });
-            document.getElementById('fbModal').classList.add('hidden');
-        }
-        function showToast(msg) {
-            const toast = document.getElementById("toast");
-            toast.innerText = msg; toast.className = "show";
-            setTimeout(() => toast.className = toast.className.replace("show", ""), 3000);
-        }
+        function copyAndGoToFb() { const text = document.getElementById('fbText'); navigator.clipboard.writeText(text.value).then(() => window.open(FB_GROUP_URL, '_blank')).catch(() => { text.select(); document.execCommand("copy"); window.open(FB_GROUP_URL, '_blank'); }); document.getElementById('fbModal').classList.add('hidden'); }
+        function showToast(msg) { const toast = document.getElementById("toast"); toast.innerText = msg; toast.className = "show"; setTimeout(() => toast.className = toast.className.replace("show", ""), 3000); }
+
+        // --- ADMIN PANEL ---
         async function loadAdminPanel() {
-            const container = document.getElementById('adminList'); container.innerHTML = "Loading...";
-            const { data } = await supabase.from('profiles').select('*');
-            if(!data) return;
-            container.innerHTML = data.map(p => `<div class='p-2 border-b text-xs'>${p.email} (Admin: ${p.is_admin})</div>`).join('');
+            const container = document.getElementById('adminList'); container.innerHTML = "Caricamento...";
+            const { data: users } = await supabase.from('profiles').select('*').order('created_at', {ascending: false}); // Non abbiamo created_at su profiles, ordina default
+            
+            if(!users) return;
+            
+            // Dividi in pending e approved
+            const pending = users.filter(u => !u.is_authorized);
+            const approved = users.filter(u => u.is_authorized);
+
+            let html = "";
+
+            // SEZIONE PENDING
+            if(pending.length > 0) {
+                html += `<h3 class="text-sm font-bold text-yellow-600 uppercase mt-2 mb-1">Da Approvare (${pending.length})</h3>`;
+                html += pending.map(p => `
+                    <div class="bg-yellow-50 p-3 rounded border border-yellow-200 mb-2 flex justify-between items-center">
+                        <div class="text-xs truncate w-1/2 font-medium">${p.email}</div>
+                        <button onclick="authorizeUser('${p.id}')" class="bg-green-500 text-white px-3 py-1 rounded text-xs font-bold shadow">✅ Autorizza</button>
+                    </div>
+                `).join('');
+            } else {
+                html += `<p class="text-xs text-gray-400 italic mb-4">Nessun utente in attesa.</p>`;
+            }
+
+            // SEZIONE UTENTI
+            html += `<h3 class="text-sm font-bold text-gray-600 uppercase mt-4 mb-1">Utenti Attivi</h3>`;
+            html += approved.map(p => `
+                <div class="p-2 border-b flex justify-between items-center">
+                    <span class="text-xs truncate w-1/2 ${p.is_admin ? 'text-blue-600 font-bold' : ''}">${p.email} ${p.is_admin ? '(Admin)' : ''}</span>
+                    <div class="flex gap-2">
+                        ${!p.is_admin ? `<button onclick="toggleBan('${p.id}', ${!p.is_banned})" class="text-xs underline ${p.is_banned ? 'text-green-600' : 'text-red-500'}">${p.is_banned ? 'Riammetti' : 'Banna'}</button>` : ''}
+                    </div>
+                </div>
+            `).join('');
+
+            container.innerHTML = html;
+        }
+
+        async function authorizeUser(userId) {
+            if(!confirm("Autorizzare questo utente?")) return;
+            await supabase.from('profiles').update({ is_authorized: true }).eq('id', userId);
+            loadAdminPanel();
+            showToast("Utente autorizzato!");
+        }
+
+        async function toggleBan(id, state) {
+            if(!confirm(state ? "Vuoi bannare questo utente?" : "Vuoi riammettere l'utente?")) return;
+            await supabase.from('profiles').update({ is_banned: state }).eq('id', id);
+            loadAdminPanel();
+            showToast("Stato Ban aggiornato.");
         }
 
         init();
