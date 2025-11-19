@@ -230,12 +230,27 @@
         <img id="fullScreenImage" src="" class="max-h-screen max-w-full object-contain" alt="Oggetto">
     </div>
 
+    <!-- NEW CONTACT MODAL (Modificato) -->
     <div id="contactModal" class="fixed inset-0 bg-black bg-opacity-60 hidden flex items-center justify-center z-[100] backdrop-blur-sm p-4">
         <div class="bg-white p-6 rounded-2xl max-w-sm w-full shadow-2xl">
-            <h3 class="text-lg font-bold mb-2">Scrivi al proprietario</h3>
-            <textarea id="msgText" class="w-full border p-3 text-sm bg-gray-50 h-24 mb-4 rounded-lg resize-none" placeholder="Ciao..."></textarea>
+            <h3 class="text-lg font-bold mb-1">Contatta il proprietario</h3>
+            
+            <!-- WARNING LIMIT -->
+            <div class="bg-yellow-50 border border-yellow-100 text-yellow-800 text-xs p-2 rounded mb-3">
+                ⚠️ <strong>Attenzione:</strong> Hai a disposizione solo <strong>2 messaggi</strong> per questo annuncio. Scrivi subito il tuo numero o email per essere ricontattato.
+            </div>
+
+            <!-- CHECKBOX FOUND -->
+            <label class="flex items-center gap-2 mb-3 cursor-pointer p-2 border border-gray-200 rounded-lg hover:bg-gray-50 transition">
+                <input type="checkbox" id="foundCheck" class="w-5 h-5 text-green-600 rounded focus:ring-green-500 border-gray-300" onchange="toggleFoundMessage()">
+                <span class="text-sm font-bold text-gray-700">🎉 Ho ritrovato l'oggetto!</span>
+            </label>
+
+            <textarea id="msgText" class="w-full border p-3 text-sm bg-gray-50 h-24 mb-4 rounded-lg resize-none focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Scrivi qui il tuo messaggio..."></textarea>
+            
             <input type="hidden" id="msgReceiverId"><input type="hidden" id="msgItemId">
-            <button onclick="sendMessage()" class="w-full bg-blue-600 text-white font-bold py-3 rounded-xl mb-2 shadow-md">Invia</button>
+            
+            <button onclick="sendMessage()" id="sendMsgBtn" class="w-full bg-blue-600 text-white font-bold py-3 rounded-xl mb-2 shadow-md transition-colors">Invia Messaggio</button>
             <button onclick="closeContactModal()" class="w-full text-gray-500 text-sm py-2">Annulla</button>
         </div>
     </div>
@@ -595,20 +610,53 @@
             document.getElementById('msgText').value = `Ciao, ho visto che l'oggetto "${itemTitle}" è segnato come ritrovato. Posso procedere alla cancellazione definitiva dall'app? Grazie, Admin.`;
         }
 
+        // GESTIONE MESSAGGI RITROVAMENTO
         function openContactModal(receiverId, itemId) {
             if(!isAuthorized) { showToast("Utente non autorizzato."); return; }
             document.getElementById('msgReceiverId').value = receiverId;
             document.getElementById('msgItemId').value = itemId;
+            
+            // Reset Checkbox & Stile
+            document.getElementById('foundCheck').checked = false;
+            toggleFoundMessage(); 
+            
             document.getElementById('contactModal').classList.remove('hidden');
         }
-        function closeContactModal() { document.getElementById('contactModal').classList.add('hidden'); document.getElementById('msgText').value = ''; }
+
+        function toggleFoundMessage() {
+            const isFound = document.getElementById('foundCheck').checked;
+            const btn = document.getElementById('sendMsgBtn');
+            if (isFound) {
+                btn.classList.remove('bg-blue-600', 'hover:bg-blue-700');
+                btn.classList.add('bg-green-600', 'hover:bg-green-700');
+                btn.innerText = "INVIA SEGNALAZIONE RITROVAMENTO";
+            } else {
+                btn.classList.remove('bg-green-600', 'hover:bg-green-700');
+                btn.classList.add('bg-blue-600', 'hover:bg-blue-700');
+                btn.innerText = "Invia Messaggio";
+            }
+        }
+
+        function closeContactModal() { 
+            document.getElementById('contactModal').classList.add('hidden'); 
+            document.getElementById('msgText').value = ''; 
+        }
+        
         function openPolicyModal() { document.getElementById('policyModal').classList.remove('hidden'); }
 
         async function sendMessage() {
             const receiverId = document.getElementById('msgReceiverId').value;
             const itemId = document.getElementById('msgItemId').value;
-            const text = document.getElementById('msgText').value;
+            let text = document.getElementById('msgText').value;
+            const isFound = document.getElementById('foundCheck').checked;
+
             if(!text.trim()) { showToast("Scrivi un messaggio!"); return; }
+
+            // Prefisso se ritrovato
+            if (isFound) {
+                text = "🎉 [OGGETTO RITROVATO] " + text;
+            }
+
             if (!isAdmin) {
                 const { count } = await supabase.from('messaggi').select('*', { count: 'exact', head: true }).eq('item_id', itemId).eq('sender_id', currentUser.id);
                 if (count >= MAX_MESSAGES) { showToast(`Limite raggiunto (${MAX_MESSAGES} msg).`); closeContactModal(); return; }
