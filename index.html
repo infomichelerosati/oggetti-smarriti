@@ -40,7 +40,7 @@
         </div>
     </header>
 
-    <!-- PENDING ALERT (Visibile solo se non autorizzato) -->
+    <!-- PENDING ALERT -->
     <div id="pendingAlert" class="hidden bg-yellow-100 border-b border-yellow-200 p-3 text-center text-yellow-800 text-sm font-medium">
         ⏳ Account in attesa di approvazione.<br>Non puoi ancora pubblicare o inviare messaggi.
     </div>
@@ -66,13 +66,10 @@
         <div id="addSection" class="hidden max-w-lg mx-auto bg-white p-5 rounded-xl shadow-sm">
             <h2 class="text-xl font-bold mb-1">Nuova Segnalazione</h2>
             <p class="text-gray-500 text-sm mb-4">Compila i dati per aiutare la ricerca.</p>
-            
-            <!-- Blocco Add se non loggato o non autorizzato -->
             <div id="loginWarning" class="text-center py-8 hidden bg-blue-50 rounded-lg border border-blue-100">
                 <p id="warningText" class="mb-3 text-blue-800 font-medium">Accedi per segnalare un oggetto.</p>
                 <button id="warningBtn" onclick="login()" class="bg-blue-600 text-white px-6 py-2 rounded shadow">Login con Google</button>
             </div>
-
             <form id="addForm" onsubmit="submitItem(event)">
                 <label class="text-xs font-bold text-gray-500 uppercase mb-1 block">Categoria</label>
                 <div class="relative mb-4">
@@ -100,7 +97,7 @@
 
         <div id="adminSection" class="hidden max-w-lg mx-auto">
             <h2 class="text-xl font-bold mb-4 text-gray-800">Amministrazione</h2>
-            <p class="text-xs text-gray-500 mb-4">Gestisci utenti e approvazioni.</p>
+            <p class="text-xs text-gray-500 mb-4">Gestisci utenti e permessi. <br>👑 = Super Admin</p>
             <div id="adminList" class="space-y-2"></div>
         </div>
     </main>
@@ -152,9 +149,10 @@
         const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
         
         let currentUser = null;
-        let userProfile = null; // Nuovo: salviamo tutto il profilo (admin, authorized, ecc)
+        let userProfile = null; 
         let isAdmin = false;
         let isAuthorized = false;
+        let isSuperAdmin = false; // Variabile locale per UI
         let map, marker;
         const CATEGORIES = ['Chiavi', 'Documenti', 'Elettronica', 'Animali', 'Abbigliamento', 'Gioielli', 'Altro'];
         let currentFilter = 'Tutti';
@@ -196,15 +194,14 @@
         function showSection(id) {
             ['listSection', 'addSection', 'adminSection', 'inboxSection'].forEach(sid => document.getElementById(sid).classList.add('hidden'));
             document.getElementById(id + 'Section').classList.remove('hidden');
-            
             const stickyFilters = document.getElementById('stickyFilters');
             if (id === 'list') stickyFilters.classList.remove('hidden'); else stickyFilters.classList.add('hidden');
-
+            document.getElementById('nav-list').className = "flex flex-col items-center justify-center w-full h-full text-blue-600 opacity-50 hover:opacity-100";
+            document.getElementById('nav-add').className = "flex flex-col items-center justify-center w-full h-full text-blue-600 opacity-50 hover:opacity-100";
             document.getElementById('nav-list').className = "flex flex-col items-center justify-center w-full h-full text-gray-400 hover:text-blue-500";
             document.getElementById('nav-add').className = "flex flex-col items-center justify-center w-full h-full text-gray-400 hover:text-blue-500";
             const addIconDiv = document.querySelector('#nav-add div');
             addIconDiv.className = "bg-blue-600 text-white rounded-full w-10 h-10 flex items-center justify-center shadow-lg -mt-6 border-4 border-white transition";
-
             if (id === 'list') document.getElementById('nav-list').className = "flex flex-col items-center justify-center w-full h-full text-blue-600";
             if (id === 'add') {
                 document.getElementById('nav-add').classList.add('text-blue-600');
@@ -230,25 +227,19 @@
             const container = document.getElementById('itemsContainer');
             const searchTerm = document.getElementById('searchBar').value.toLowerCase();
             container.innerHTML = `<div class="text-center py-10"><div class="loader ease-linear rounded-full border-4 border-t-4 border-gray-200 h-8 w-8 mx-auto"></div></div>`;
-
             let query = supabase.from('oggetti_smarriti').select(`*, profiles(email)`).order('created_at', { ascending: false });
             if (currentFilter !== 'Tutti') query = query.eq('categoria', currentFilter);
             if (searchTerm) query = query.or(`titolo.ilike.%${searchTerm}%,descrizione.ilike.%${searchTerm}%`);
-
             const { data: items, error } = await query;
             if (error) { container.innerHTML = `<p class="text-red-500 text-center text-sm">Errore: ${error.message}</p>`; return; }
             if (items.length === 0) { container.innerHTML = `<div class="text-center py-16 flex flex-col items-center"><div class="bg-gray-200 p-4 rounded-full mb-3 text-3xl">📭</div><p class="text-gray-500 font-medium">Nessun oggetto trovato</p></div>`; return; }
-
             container.innerHTML = items.map(item => {
                 const isOwner = currentUser && currentUser.id === item.user_id;
                 const canDelete = isOwner || isAdmin;
                 const isRitrovato = item.stato === 'ritrovato';
                 const cardClass = isRitrovato ? "bg-white p-3 rounded-xl shadow-sm border border-green-400 bg-green-50 flex gap-3 opacity-90" : "bg-white p-3 rounded-xl shadow-sm border border-gray-100 flex gap-3";
                 const badge = isRitrovato ? `<span class="bg-green-600 text-white text-[10px] px-2 py-0.5 rounded font-bold uppercase tracking-wider">RITROVATO ✅</span>` : `<span class="bg-blue-50 text-blue-700 text-[10px] px-2 py-0.5 rounded font-bold uppercase tracking-wider">${item.categoria || 'Altro'}</span>`;
-
-                // Mostra pulsante contatta SOLO se: non sono io, sono loggato, sono autorizzato, non è già ritrovato
                 const showContact = !isOwner && currentUser && isAuthorized && !isRitrovato;
-
                 return `
                 <div class="${cardClass}">
                     <div class="w-24 h-24 shrink-0 rounded-lg bg-gray-100 overflow-hidden relative">
@@ -345,14 +336,12 @@
             if (error) showToast("Errore: " + error.message); else { document.getElementById('fbText').value = `🔍 SMARRITO/RITROVATO: ${cat.toUpperCase()}\nCosa: ${title}\nInfo: ${desc}\n\nVedi dettagli: ${window.location.href}`; document.getElementById('fbModal').classList.remove('hidden'); e.target.reset(); if(marker) map.removeLayer(marker); showSection('list'); loadItems(); }
             btn.innerText = "PUBBLICA"; btn.disabled = false;
         }
-
         async function deleteItem(id) { if(!confirm("Sei sicuro?")) return; await supabase.from('oggetti_smarriti').delete().eq('id', id); loadItems(); showToast("Rimosso!"); }
 
         // --- AUTH & CHECK APPROVAZIONE ---
         async function checkUser() {
             const { data: { session } } = await supabase.auth.getSession();
             currentUser = session?.user;
-            
             const loginBtn = document.getElementById('loginBtn');
             const logoutBtn = document.getElementById('logoutBtn');
             const inboxBtn = document.getElementById('inboxBtn');
@@ -362,40 +351,34 @@
             const navAdmin = document.getElementById('nav-admin');
 
             if (currentUser) {
-                // Leggo il profilo completo
                 const { data: profile } = await supabase.from('profiles').select('*').eq('id', currentUser.id).single();
                 userProfile = profile;
                 isAdmin = profile?.is_admin || false;
                 isAuthorized = profile?.is_authorized || false;
+                isSuperAdmin = profile?.is_super_admin || false; // NUOVO CHECK
 
                 loginBtn.classList.add('hidden');
                 logoutBtn.classList.remove('hidden');
-
                 if (isAuthorized) {
-                    // Utente OK
                     pendingAlert.classList.add('hidden');
                     addForm.classList.remove('hidden');
                     loginWarning.classList.add('hidden');
                     inboxBtn.classList.remove('hidden');
                     if (isAdmin) navAdmin.classList.remove('hidden');
                 } else {
-                    // Utente IN ATTESA
                     pendingAlert.classList.remove('hidden');
                     addForm.classList.add('hidden');
                     loginWarning.classList.remove('hidden');
                     document.getElementById('warningText').innerText = "Il tuo account è in attesa di approvazione.";
-                    document.getElementById('warningBtn').classList.add('hidden'); // Nascondi tasto login, è già loggato
+                    document.getElementById('warningBtn').classList.add('hidden'); 
                     inboxBtn.classList.add('hidden');
                     navAdmin.classList.add('hidden');
                 }
-
             } else {
-                // Non loggato
                 loginBtn.classList.remove('hidden');
                 logoutBtn.classList.add('hidden');
                 inboxBtn.classList.add('hidden');
                 pendingAlert.classList.add('hidden');
-                
                 addForm.classList.add('hidden');
                 loginWarning.classList.remove('hidden');
                 document.getElementById('warningText').innerText = "Accedi per segnalare un oggetto.";
@@ -409,20 +392,15 @@
         function copyAndGoToFb() { const text = document.getElementById('fbText'); navigator.clipboard.writeText(text.value).then(() => window.open(FB_GROUP_URL, '_blank')).catch(() => { text.select(); document.execCommand("copy"); window.open(FB_GROUP_URL, '_blank'); }); document.getElementById('fbModal').classList.add('hidden'); }
         function showToast(msg) { const toast = document.getElementById("toast"); toast.innerText = msg; toast.className = "show"; setTimeout(() => toast.className = toast.className.replace("show", ""), 3000); }
 
-        // --- ADMIN PANEL ---
+        // --- ADMIN PANEL (Aggiornato per Super Admin) ---
         async function loadAdminPanel() {
             const container = document.getElementById('adminList'); container.innerHTML = "Caricamento...";
-            const { data: users } = await supabase.from('profiles').select('*').order('created_at', {ascending: false}); // Non abbiamo created_at su profiles, ordina default
-            
+            const { data: users } = await supabase.from('profiles').select('*').order('created_at', {ascending: false});
             if(!users) return;
-            
-            // Dividi in pending e approved
             const pending = users.filter(u => !u.is_authorized);
             const approved = users.filter(u => u.is_authorized);
-
             let html = "";
 
-            // SEZIONE PENDING
             if(pending.length > 0) {
                 html += `<h3 class="text-sm font-bold text-yellow-600 uppercase mt-2 mb-1">Da Approvare (${pending.length})</h3>`;
                 html += pending.map(p => `
@@ -431,21 +409,38 @@
                         <button onclick="authorizeUser('${p.id}')" class="bg-green-500 text-white px-3 py-1 rounded text-xs font-bold shadow">✅ Autorizza</button>
                     </div>
                 `).join('');
-            } else {
-                html += `<p class="text-xs text-gray-400 italic mb-4">Nessun utente in attesa.</p>`;
-            }
+            } else { html += `<p class="text-xs text-gray-400 italic mb-4">Nessun utente in attesa.</p>`; }
 
-            // SEZIONE UTENTI
             html += `<h3 class="text-sm font-bold text-gray-600 uppercase mt-4 mb-1">Utenti Attivi</h3>`;
-            html += approved.map(p => `
+            html += approved.map(p => {
+                const isMe = p.id === currentUser.id;
+                const targetIsSuperAdmin = p.is_super_admin; // Flag dal DB
+                
+                // Se l'utente target è super admin, mostro la corona. 
+                // SE SONO IO il super admin, non mostro comunque pulsanti su me stesso.
+                // Se sono un admin normale, NON vedo i pulsanti sul super admin.
+
+                let badge = "";
+                if (p.is_admin) badge = "<span class='text-blue-600 font-bold text-[10px]'>ADMIN</span>";
+                if (targetIsSuperAdmin) badge = "<span class='text-purple-600 font-bold text-[10px] ml-1'>👑 SUPER</span>";
+
+                // Logica pulsanti: Mostra SOLO se NON è me stesso E NON è un Super Admin (a meno che io non sia Super Admin? No, teniamo semplice: Super Admin è intoccabile)
+                const showActions = !isMe && !targetIsSuperAdmin;
+
+                return `
                 <div class="p-2 border-b flex justify-between items-center">
-                    <span class="text-xs truncate w-1/2 ${p.is_admin ? 'text-blue-600 font-bold' : ''}">${p.email} ${p.is_admin ? '(Admin)' : ''}</span>
+                    <span class="text-xs truncate w-1/2 flex items-center gap-1">${p.email} ${badge}</span>
                     <div class="flex gap-2">
-                        ${!p.is_admin ? `<button onclick="toggleBan('${p.id}', ${!p.is_banned})" class="text-xs underline ${p.is_banned ? 'text-green-600' : 'text-red-500'}">${p.is_banned ? 'Riammetti' : 'Banna'}</button>` : ''}
+                        ${showActions ? (
+                            !p.is_admin ? 
+                            `<button onclick="toggleAdmin('${p.id}', true)" class="text-xs text-blue-600 underline">👮 Nomina</button>` : 
+                            `<button onclick="toggleAdmin('${p.id}', false)" class="text-xs text-gray-400 underline">Rimuovi</button>`
+                        ) : ''}
+                        
+                        ${showActions ? `<button onclick="toggleBan('${p.id}', ${!p.is_banned})" class="text-xs underline ${p.is_banned ? 'text-green-600' : 'text-red-500'}">${p.is_banned ? 'Riammetti' : 'Banna'}</button>` : ''}
                     </div>
                 </div>
-            `).join('');
-
+            `}).join('');
             container.innerHTML = html;
         }
 
@@ -456,6 +451,12 @@
             showToast("Utente autorizzato!");
         }
 
+        async function toggleAdmin(userId, state) {
+            const action = state ? "NOMINARE Admin" : "RIMUOVERE i permessi Admin a";
+            if(!confirm(`Sei sicuro di voler ${action} questo utente?`)) return;
+            const { error } = await supabase.from('profiles').update({ is_admin: state }).eq('id', userId);
+            if(error) showToast("Errore: " + error.message); else { showToast("Permessi aggiornati."); loadAdminPanel(); }
+        }
         async function toggleBan(id, state) {
             if(!confirm(state ? "Vuoi bannare questo utente?" : "Vuoi riammettere l'utente?")) return;
             await supabase.from('profiles').update({ is_banned: state }).eq('id', id);
