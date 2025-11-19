@@ -7,8 +7,14 @@
     
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    
+    <!-- Leaflet + MarkerCluster -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.Default.css" />
+    <script src="https://unpkg.com/leaflet.markercluster@1.4.1/dist/leaflet.markercluster.js"></script>
+    
     <script src="https://cdn.jsdelivr.net/npm/browser-image-compression@2.0.0/dist/browser-image-compression.js"></script>
 
     <style>
@@ -17,7 +23,7 @@
         #globalMap { height: 100%; width: 100%; z-index: 1; }
         .loader { border-top-color: #3498db; -webkit-animation: spinner 1.5s linear infinite; animation: spinner 1.5s linear infinite; }
         @keyframes spinner { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        #toast { visibility: hidden; min-width: 250px; background-color: #333; color: #fff; text-align: center; border-radius: 4px; padding: 16px; position: fixed; z-index: 100; left: 50%; bottom: 90px; transform: translateX(-50%); font-size: 17px; opacity: 0; transition: opacity 0.3s, bottom 0.3s; }
+        #toast { visibility: hidden; min-width: 250px; background-color: #333; color: #fff; text-align: center; border-radius: 4px; padding: 16px; position: fixed; z-index: 200; left: 50%; bottom: 90px; transform: translateX(-50%); font-size: 17px; opacity: 0; transition: opacity 0.3s, bottom 0.3s; }
         #toast.show { visibility: visible; opacity: 1; bottom: 110px; }
         .hide-scroll::-webkit-scrollbar { display: none; }
         .hide-scroll { -ms-overflow-style: none; scrollbar-width: none; cursor: grab; }
@@ -27,7 +33,6 @@
         /* Leaflet Fixes */
         .leaflet-pane { z-index: 10 !important; }
         .leaflet-top, .leaflet-bottom { z-index: 20 !important; }
-        /* Popup personalizzato */
         .custom-popup .leaflet-popup-content-wrapper { padding: 0; overflow: hidden; border-radius: 8px; }
         .custom-popup .leaflet-popup-content { margin: 0; width: 200px !important; }
     </style>
@@ -43,8 +48,10 @@
         <div class="flex gap-3 items-center">
             <button onclick="openHelpModal()" class="text-2xl hover:scale-110 transition-transform" title="Istruzioni">📘</button>
             <button id="inboxBtn" onclick="showInbox()" class="relative hidden text-2xl">🔔<span id="msgBadge" class="notification-badge">0</span></button>
+            
+            <!-- Tasto Login / Profilo -->
             <button id="loginBtn" onclick="openAuthModal()" class="text-xs bg-white text-blue-600 px-3 py-1.5 rounded font-bold hidden shadow">ACCEDI</button>
-            <button id="logoutBtn" onclick="logout()" class="text-xs bg-blue-800 text-white px-3 py-1.5 rounded hidden">ESCI</button>
+            <button id="profileBtn" onclick="openProfileModal()" class="hidden bg-blue-800 rounded-full w-8 h-8 flex items-center justify-center border border-blue-400 shadow hover:bg-blue-700">👤</button>
         </div>
     </header>
 
@@ -76,11 +83,11 @@
             </div>
         </div>
 
-        <!-- GLOBAL MAP SECTION -->
+        <!-- GLOBAL MAP SECTION (CLUSTERING) -->
         <div id="mapSection" class="hidden w-full h-full relative">
             <div id="globalMap"></div>
             <div class="absolute bottom-20 left-1/2 transform -translate-x-1/2 bg-white px-4 py-2 rounded-full shadow-lg z-[30] text-xs font-bold text-gray-600 border border-gray-200 pointer-events-none opacity-90">
-                Tocca un punto per i dettagli
+                Tocca i cerchi per espandere
             </div>
         </div>
 
@@ -99,10 +106,16 @@
                     <select id="catSelect" class="w-full p-3 bg-gray-50 border border-gray-200 rounded-lg appearance-none focus:outline-none focus:border-blue-500" required></select>
                     <span class="absolute right-3 top-3 text-gray-400">▼</span>
                 </div>
+                
+                <label class="text-xs font-bold text-gray-500 uppercase mb-1 block">Quando (Smarrito/Ritrovato)</label>
+                <input type="date" id="dateLost" class="w-full p-3 bg-gray-50 border border-gray-200 rounded-lg mb-4 focus:outline-none focus:border-blue-500" required>
+
                 <label class="text-xs font-bold text-gray-500 uppercase mb-1 block">Titolo</label>
                 <input type="text" id="title" class="w-full p-3 bg-gray-50 border border-gray-200 rounded-lg mb-4 focus:outline-none focus:border-blue-500" placeholder="Es. Chiavi Fiat" required>
+                
                 <label class="text-xs font-bold text-gray-500 uppercase mb-1 block">Descrizione</label>
                 <textarea id="desc" class="w-full p-3 bg-gray-50 border border-gray-200 rounded-lg mb-4 h-24 focus:outline-none focus:border-blue-500" placeholder="Colore, portachiavi, zona..." required></textarea>
+                
                 <label class="text-xs font-bold text-gray-500 uppercase mb-1 block">Foto</label>
                 <input type="file" id="photo" accept="image/*" class="w-full mb-4 text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100">
                 
@@ -138,27 +151,40 @@
         <button onclick="showSection('list')" id="nav-list" class="nav-btn flex flex-col items-center justify-center w-full h-full text-blue-600">
             <span class="text-2xl mb-1">📋</span><span class="text-[10px] font-bold uppercase tracking-wide">Lista</span>
         </button>
-        
-        <!-- NEW MAP BUTTON -->
         <button onclick="showSection('map')" id="nav-map" class="nav-btn flex flex-col items-center justify-center w-full h-full text-gray-400 hover:text-blue-500">
             <span class="text-2xl mb-1">🗺️</span><span class="text-[10px] font-bold uppercase tracking-wide">Mappa</span>
         </button>
-
         <button onclick="showSection('add')" id="nav-add" class="nav-btn flex flex-col items-center justify-center w-full h-full text-gray-400 hover:text-blue-500 group">
             <div class="bg-blue-600 text-white rounded-full w-10 h-10 flex items-center justify-center shadow-lg -mt-6 border-4 border-white transition-transform group-hover:scale-110 group-active:scale-95"><span class="text-2xl font-bold">+</span></div>
             <span class="text-[10px] font-bold uppercase tracking-wide mt-1">Segnala</span>
         </button>
-        
         <button onclick="showSection('admin')" id="nav-admin" class="nav-btn flex flex-col items-center justify-center w-full h-full text-gray-400 hidden">
             <span class="text-2xl mb-1">⚙️</span><span class="text-[10px] font-bold uppercase tracking-wide">Admin</span>
         </button>
     </nav>
 
-    <!-- MODALI (Rimaste uguali, ne aggiungo solo una per Auth per completezza) -->
+    <!-- MODALI -->
+    
+    <!-- PROFILO / LOGOUT / DELETE -->
+    <div id="profileModal" class="fixed inset-0 bg-black bg-opacity-60 hidden flex items-center justify-center z-[100] backdrop-blur-sm p-4">
+        <div class="bg-white p-6 rounded-2xl max-w-xs w-full shadow-2xl text-center">
+            <h3 class="text-xl font-bold mb-2">Il tuo Profilo</h3>
+            <p id="userEmailDisplay" class="text-sm text-gray-500 mb-6 break-all"></p>
+            
+            <button onclick="logout()" class="w-full bg-gray-200 text-gray-800 font-bold py-3 rounded-xl mb-3 hover:bg-gray-300">ESCI</button>
+            
+            <hr class="my-4 border-gray-200">
+            
+            <button onclick="deleteAccount()" class="w-full bg-red-50 text-red-600 border border-red-100 font-bold py-3 rounded-xl hover:bg-red-100 text-xs uppercase tracking-wider">⚠️ Elimina Account</button>
+            
+            <button onclick="document.getElementById('profileModal').classList.add('hidden')" class="text-gray-400 text-sm py-3 mt-2 w-full">Chiudi</button>
+        </div>
+    </div>
+
     <div id="helpModal" class="fixed inset-0 bg-black bg-opacity-60 hidden flex items-center justify-center z-[100] backdrop-blur-sm p-4">
         <div class="bg-white p-6 rounded-2xl max-w-md w-full shadow-2xl">
             <h3 class="text-xl font-bold text-gray-800 mb-2">Guida Rapida</h3>
-            <p class="text-sm text-gray-600 mb-4">Usa la scheda <strong>Mappa</strong> per vedere tutti gli oggetti intorno a te.</p>
+            <p class="text-sm text-gray-600 mb-4">Usa la scheda <strong>Mappa</strong> per vedere gli oggetti raggruppati.</p>
             <button onclick="closeHelpModal()" class="w-full bg-blue-600 text-white font-bold py-3 rounded-xl shadow">Ho capito</button>
         </div>
     </div>
@@ -242,10 +268,10 @@
         let currentViewLng = 0;
         let isLoginMode = true; 
 
-        // GLOBAL MAP VARS
+        // MAPPA GLOBALE & CLUSTERING
         let globalMap = null;
-        let globalMarkersLayer = null;
-        let allItemsData = []; // Cache per la mappa globale
+        let markersClusterGroup = null; // Nuova variabile per il cluster
+        let allItemsData = []; 
 
         // ADMIN CACHE
         let adminUsersCache = [];
@@ -256,11 +282,14 @@
         const MAX_MESSAGES = 2;
 
         async function init() {
+            // Set data default a oggi
+            document.getElementById('dateLost').valueAsDate = new Date();
+            
             await checkUser();
-            initMap(); // Mappa inserimento
+            initMap(); 
             renderCategories();
             enableDragScroll();
-            loadItems(); // Carica lista e dati mappa
+            loadItems();
             if(currentUser && isAuthorized) checkMessages();
         }
 
@@ -271,6 +300,37 @@
         function closeAuthModal() { document.getElementById('authModal').classList.add('hidden'); document.getElementById('authEmail').value = ''; document.getElementById('authPass').value = ''; }
         function toggleAuthMode() { isLoginMode = !isLoginMode; updateAuthUI(); }
         
+        // Gestione Profilo
+        function openProfileModal() { 
+            document.getElementById('userEmailDisplay').innerText = currentUser ? currentUser.email : '';
+            document.getElementById('profileModal').classList.remove('hidden'); 
+        }
+        
+        async function deleteAccount() {
+            if(!confirm("SEI SICURO?\nQuesta azione eliminerà PER SEMPRE tutti i tuoi dati, annunci e messaggi. Non si può annullare.")) return;
+            const btn = document.querySelector('#profileModal button.bg-red-50');
+            btn.innerText = "ELIMINAZIONE..."; btn.disabled = true;
+
+            try {
+                // 1. Cancella oggetti (le policy permettono di cancellare i propri)
+                const { error: errItems } = await supabase.from('oggetti_smarriti').delete().eq('user_id', currentUser.id);
+                // 2. Cancella profilo (policy permette owner delete?) -> Se no, prova soft delete o basati su CASCADE
+                // Per sicurezza con RLS standard, spesso serve cancellare il profilo per scatenare il resto se ci sono CASCADE FK.
+                // Se non ci sono FK Cascade, cancelliamo manuale.
+                
+                // Proviamo a cancellare la riga profilo.
+                const { error: errProfile } = await supabase.from('profiles').delete().eq('id', currentUser.id);
+                
+                if (errProfile) throw errProfile;
+
+                await supabase.auth.signOut();
+                window.location.reload();
+            } catch (e) {
+                alert("Errore eliminazione: " + e.message);
+                btn.innerText = "⚠️ Elimina Account"; btn.disabled = false;
+            }
+        }
+
         function updateAuthUI() {
             const title = document.getElementById('authTitle'); const btn = document.getElementById('authActionBtn'); const switchText = document.getElementById('authSwitchText'); const switchBtn = document.getElementById('authSwitchBtn');
             if (isLoginMode) { title.innerText = "Accedi"; btn.innerText = "Accedi con Email"; switchText.innerText = "Non hai un account?"; switchBtn.innerText = "Registrati"; } 
@@ -318,25 +378,21 @@
             loadItems();
         }
 
-        // SECTION MANAGER AGGIORNATO
         function showSection(id) {
-            // Hide all
             ['listSection', 'addSection', 'adminSection', 'inboxSection', 'mapSection'].forEach(sid => document.getElementById(sid).classList.add('hidden'));
             document.getElementById(id + 'Section').classList.remove('hidden');
             
             const stickyFilters = document.getElementById('stickyFilters');
             if (id === 'list' || id === 'map') stickyFilters.classList.remove('hidden'); else stickyFilters.classList.add('hidden');
             
-            // Reset Nav Buttons Style
             document.querySelectorAll('.nav-btn').forEach(btn => {
                 btn.className = "nav-btn flex flex-col items-center justify-center w-full h-full text-gray-400 hover:text-blue-500";
             });
 
-            // Update specific styles
             if (id === 'list') document.getElementById('nav-list').className = "nav-btn flex flex-col items-center justify-center w-full h-full text-blue-600";
             if (id === 'map') {
                 document.getElementById('nav-map').className = "nav-btn flex flex-col items-center justify-center w-full h-full text-blue-600";
-                initGlobalMap(); // Inizializza la mappa quando apri la tab
+                initGlobalMap(); 
             }
             
             const addIconDiv = document.querySelector('#nav-add div');
@@ -351,7 +407,6 @@
             if (id === 'inbox') loadInbox();
         }
 
-        // MAPPA INSERIMENTO
         function initMap() {
             map = L.map('map').setView([42.7600, 11.1100], 14); 
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap' }).addTo(map);
@@ -363,28 +418,29 @@
             });
         }
 
-        // --- NUOVA MAPPA GLOBALE ---
+        // --- MAPPA GLOBALE CON CLUSTERING ---
         function initGlobalMap() {
             if (!globalMap) {
                 globalMap = L.map('globalMap').setView([42.7600, 11.1100], 13);
                 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap' }).addTo(globalMap);
-                globalMarkersLayer = L.layerGroup().addTo(globalMap);
+                // Crea il gruppo Cluster
+                markersClusterGroup = L.markerClusterGroup(); 
+                globalMap.addLayer(markersClusterGroup);
             }
             setTimeout(() => {
-                globalMap.invalidateSize(); // Fix rendering grigio
+                globalMap.invalidateSize();
                 renderGlobalMarkers();
             }, 100);
         }
 
         function renderGlobalMarkers() {
-            if (!globalMap || !globalMarkersLayer) return;
-            globalMarkersLayer.clearLayers();
+            if (!globalMap || !markersClusterGroup) return;
+            markersClusterGroup.clearLayers(); // Pulisci il cluster, non la mappa diretta
 
             allItemsData.forEach(item => {
                 if (item.latitudine && item.longitudine) {
                     const isRitrovato = item.stato === 'ritrovato';
                     const color = isRitrovato ? 'green' : 'red';
-                    // Icona semplice
                     const icon = L.divIcon({
                         className: 'custom-div-icon',
                         html: `<div style="background-color:${color}; width:12px; height:12px; border-radius:50%; border:2px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.3);"></div>`,
@@ -394,8 +450,9 @@
 
                     const marker = L.marker([item.latitudine, item.longitudine], {icon: icon});
                     
-                    // Popup contenuto
                     const safeTitle = item.titolo.replace(/'/g, "\\'");
+                    const dateStr = item.data_smarrimento ? new Date(item.data_smarrimento).toLocaleDateString() : 'Data ignota';
+                    
                     const popupContent = `
                         <div class="relative w-48 bg-white">
                             <div class="h-24 w-full bg-gray-100 overflow-hidden">
@@ -403,26 +460,24 @@
                             </div>
                             <div class="p-2">
                                 <p class="font-bold text-sm truncate">${item.titolo}</p>
-                                <p class="text-[10px] text-gray-500 mb-2">${isRitrovato ? '✅ RITROVATO' : '🔍 SMARRITO'}</p>
+                                <p class="text-[10px] text-gray-500 mb-1">${isRitrovato ? '✅ RITROVATO' : '🔍 SMARRITO'}</p>
+                                <p class="text-[10px] text-gray-400 mb-2">Data: ${dateStr}</p>
                                 <button onclick="showItemDetailsFromMap('${item.id}')" class="w-full bg-blue-600 text-white text-xs py-1 rounded">Vedi Dettagli</button>
                             </div>
                         </div>
                     `;
-                    
                     marker.bindPopup(popupContent, { className: 'custom-popup' });
-                    globalMarkersLayer.addLayer(marker);
+                    markersClusterGroup.addLayer(marker); // Aggiungi al cluster
                 }
             });
         }
 
         function showItemDetailsFromMap(itemId) {
-            // Cliccando dal popup mappa, andiamo alla lista e scrolliamo all'elemento (semplificato: ricarica lista filtrata)
             showSection('list');
             const el = document.getElementById(`item-${itemId}`);
             if(el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
             else showToast("Oggetto nella lista...");
         }
-
         // --- END GLOBAL MAP ---
 
         function openViewMap(lat, lng, title) {
@@ -442,7 +497,6 @@
             const container = document.getElementById('itemsContainer');
             const searchTerm = document.getElementById('searchBar').value.toLowerCase();
             
-            // Solo se siamo in vista lista mostriamo il loader, altrimenti lo facciamo in background
             if(!document.getElementById('listSection').classList.contains('hidden')) {
                 container.innerHTML = `<div class="text-center py-10"><div class="loader ease-linear rounded-full border-4 border-t-4 border-gray-200 h-8 w-8 mx-auto"></div></div>`;
             }
@@ -455,10 +509,9 @@
             
             if (error) { container.innerHTML = `<p class="text-red-500 text-center text-sm">Errore: ${error.message}</p>`; return; }
             
-            // SALVA DATI PER LA MAPPA GLOBALE
             allItemsData = items || [];
             if(!document.getElementById('mapSection').classList.contains('hidden')) {
-                renderGlobalMarkers(); // Aggiorna mappa live se aperta
+                renderGlobalMarkers(); 
             }
 
             if (items.length === 0) { container.innerHTML = `<div class="text-center py-16 flex flex-col items-center"><div class="bg-gray-200 p-4 rounded-full mb-3 text-3xl">📭</div><p class="text-gray-500 font-medium">Nessun oggetto trovato</p></div>`; return; }
@@ -471,6 +524,10 @@
                 const badge = isRitrovato ? `<span class="bg-green-600 text-white text-[10px] px-2 py-0.5 rounded font-bold uppercase tracking-wider">RITROVATO ✅</span>` : `<span class="bg-blue-50 text-blue-700 text-[10px] px-2 py-0.5 rounded font-bold uppercase tracking-wider">${item.categoria || 'Altro'}</span>`;
                 const showContact = !isOwner && currentUser && isAuthorized && !isRitrovato;
                 const safeTitle = item.titolo.replace(/'/g, "\\'");
+                
+                // Format Data Smarrimento
+                const dataPerso = item.data_smarrimento ? new Date(item.data_smarrimento).toLocaleDateString() : '<span class="italic text-gray-300">Data ignota</span>';
+                
                 return `
                 <div id="item-${item.id}" class="${cardClass}">
                     <div class="w-24 h-24 shrink-0 rounded-lg bg-gray-100 overflow-hidden relative cursor-pointer" ${item.foto_url ? `onclick="openImageModal('${item.foto_url}')"` : ''}>
@@ -478,11 +535,12 @@
                     </div>
                     <div class="flex-1 min-w-0 flex flex-col justify-between">
                         <div>
-                            <div class="flex justify-between items-start mb-1">${badge}<span class="text-[10px] text-gray-400">${new Date(item.created_at).toLocaleDateString()}</span></div>
+                            <div class="flex justify-between items-start mb-1">${badge}<span class="text-[10px] text-gray-400">Pubblicato: ${new Date(item.created_at).toLocaleDateString()}</span></div>
                             <h3 class="font-bold text-gray-800 text-base leading-tight mb-1 truncate">${item.titolo}</h3>
+                            <p class="text-[10px] text-gray-500 mb-1">📅 Data evento: <strong class="text-gray-700">${dataPerso}</strong></p>
                             <p class="text-gray-500 text-xs line-clamp-2 leading-relaxed">${item.descrizione}</p>
                         </div>
-                        <div class="flex items-center justify-between mt-3 pt-2 border-t border-gray-50">
+                        <div class="flex items-center justify-between mt-2 pt-2 border-t border-gray-50">
                             <div class="flex gap-2">
                                 ${item.latitudine ? `<button onclick="openViewMap(${item.latitudine}, ${item.longitudine}, '${safeTitle}')" class="text-gray-500 hover:text-blue-600 text-xs flex items-center gap-1 bg-gray-50 px-2 py-1 rounded border border-gray-100">📍 Mappa</button>` : ''}
                                 ${showContact ? `<button onclick="openContactModal('${item.user_id}', '${item.id}')" class="text-blue-600 hover:text-blue-800 text-xs flex items-center gap-1 bg-blue-50 px-2 py-1 rounded border border-blue-100 font-semibold">💬 Contatta</button>` : ''}
@@ -558,7 +616,14 @@
             e.preventDefault();
             if (!isAuthorized) { showToast("Attendi approvazione admin."); return; }
             const btn = document.getElementById('submitBtn'); btn.innerHTML = "⏳ Caricamento..."; btn.disabled = true;
-            const title = document.getElementById('title').value; const desc = document.getElementById('desc').value; const cat = document.getElementById('catSelect').value; const lat = document.getElementById('lat').value; const lng = document.getElementById('lng').value; const fileInput = document.getElementById('photo');
+            const title = document.getElementById('title').value; 
+            const desc = document.getElementById('desc').value; 
+            const cat = document.getElementById('catSelect').value; 
+            const lat = document.getElementById('lat').value; 
+            const lng = document.getElementById('lng').value; 
+            const dateLost = document.getElementById('dateLost').value; // Nuova Data
+            const fileInput = document.getElementById('photo');
+            
             let publicUrl = null;
             if (fileInput.files.length > 0) {
                 try {
@@ -568,8 +633,19 @@
                     if (error) throw error; const { data: urlData } = supabase.storage.from(BUCKET_NAME).getPublicUrl(fileName); publicUrl = urlData.publicUrl;
                 } catch (err) { showToast("Errore foto: " + err.message); btn.innerText = "RIPROVA"; btn.disabled = false; return; }
             }
-            const { error } = await supabase.from('oggetti_smarriti').insert({ titolo: title, descrizione: desc, categoria: cat, latitudine: lat || null, longitudine: lng || null, foto_url: publicUrl, stato: 'attivo' });
-            if (error) showToast("Errore: " + error.message); else { document.getElementById('fbText').value = `🔍 SMARRITO/RITROVATO: ${cat.toUpperCase()}\nCosa: ${title}\nInfo: ${desc}\n\nVedi dettagli: ${window.location.href}`; document.getElementById('fbModal').classList.remove('hidden'); e.target.reset(); if(marker) map.removeLayer(marker); showSection('list'); loadItems(); }
+            
+            const { error } = await supabase.from('oggetti_smarriti').insert({ 
+                titolo: title, 
+                descrizione: desc, 
+                categoria: cat, 
+                latitudine: lat || null, 
+                longitudine: lng || null, 
+                foto_url: publicUrl, 
+                stato: 'attivo',
+                data_smarrimento: dateLost || new Date().toISOString() // Salva data
+            });
+            
+            if (error) showToast("Errore: " + error.message); else { document.getElementById('fbText').value = `🔍 SMARRITO/RITROVATO: ${cat.toUpperCase()}\nCosa: ${title}\nData: ${new Date(dateLost).toLocaleDateString()}\nInfo: ${desc}\n\nVedi dettagli: ${window.location.href}`; document.getElementById('fbModal').classList.remove('hidden'); e.target.reset(); if(marker) map.removeLayer(marker); showSection('list'); loadItems(); }
             btn.innerText = "PUBBLICA"; btn.disabled = false;
         }
         
@@ -588,7 +664,10 @@
             const { data: { session } } = await supabase.auth.getSession();
             currentUser = session?.user;
             
-            const loginBtn = document.getElementById('loginBtn'); const logoutBtn = document.getElementById('logoutBtn'); const inboxBtn = document.getElementById('inboxBtn');
+            const loginBtn = document.getElementById('loginBtn'); 
+            // FIX: logoutBtn rimosso perchè sostituito da profileBtn
+            const profileBtn = document.getElementById('profileBtn'); 
+            const inboxBtn = document.getElementById('inboxBtn');
             const addForm = document.getElementById('addForm'); const loginWarning = document.getElementById('loginWarning'); const pendingAlert = document.getElementById('pendingAlert'); const navAdmin = document.getElementById('nav-admin');
 
             if (currentUser) {
@@ -597,7 +676,10 @@
                 isAdmin = profile?.is_admin || false;
                 isAuthorized = profile?.is_authorized || false;
 
-                loginBtn.classList.add('hidden'); logoutBtn.classList.remove('hidden');
+                loginBtn.classList.add('hidden'); 
+                // FIX: rimosso logoutBtn.classList.add
+                profileBtn.classList.remove('hidden'); // Mostra profilo invece di logout
+
                 if (isAuthorized) {
                     pendingAlert.classList.add('hidden'); addForm.classList.remove('hidden'); loginWarning.classList.add('hidden'); inboxBtn.classList.remove('hidden');
                     if (isAdmin) navAdmin.classList.remove('hidden');
@@ -607,7 +689,9 @@
                     document.getElementById('warningBtn').classList.add('hidden'); inboxBtn.classList.add('hidden'); navAdmin.classList.add('hidden');
                 }
             } else {
-                loginBtn.classList.remove('hidden'); logoutBtn.classList.add('hidden'); inboxBtn.classList.add('hidden'); pendingAlert.classList.add('hidden');
+                loginBtn.classList.remove('hidden'); 
+                // FIX: rimosso logoutBtn.classList.add
+                profileBtn.classList.add('hidden'); inboxBtn.classList.add('hidden'); pendingAlert.classList.add('hidden');
                 addForm.classList.add('hidden'); loginWarning.classList.remove('hidden');
                 document.getElementById('warningText').innerText = "Accedi per segnalare un oggetto.";
                 document.getElementById('warningBtn').classList.remove('hidden'); navAdmin.classList.add('hidden');
