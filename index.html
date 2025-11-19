@@ -120,8 +120,27 @@
                 <label class="text-xs font-bold text-gray-500 uppercase mb-1 block">Descrizione</label>
                 <textarea id="desc" class="w-full p-3 bg-gray-50 border border-gray-200 rounded-lg mb-4 h-24 focus:outline-none focus:border-blue-500" placeholder="Colore, portachiavi, zona..." required></textarea>
                 
-                <label class="text-xs font-bold text-gray-500 uppercase mb-1 block">Foto</label>
-                <input type="file" id="photo" accept="image/*" class="w-full mb-4 text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100">
+                <label class="text-xs font-bold text-gray-500 uppercase mb-1 block">Foto (Facoltativa)</label>
+                
+                <!-- NUOVI PULSANTI FOTO -->
+                <div class="flex gap-2 mb-2">
+                    <button type="button" onclick="document.getElementById('cameraInput').click()" class="flex-1 bg-blue-50 text-blue-700 border border-blue-200 py-3 rounded-lg font-bold text-xs flex items-center justify-center gap-2 hover:bg-blue-100 active:scale-95 transition">
+                        📷 Scatta
+                    </button>
+                    <button type="button" onclick="document.getElementById('galleryInput').click()" class="flex-1 bg-blue-50 text-blue-700 border border-blue-200 py-3 rounded-lg font-bold text-xs flex items-center justify-center gap-2 hover:bg-blue-100 active:scale-95 transition">
+                        🖼️ Carica
+                    </button>
+                </div>
+
+                <!-- INPUT NASCOSTI -->
+                <input type="file" id="cameraInput" accept="image/*" capture="environment" class="hidden" onchange="handleFileSelect(event)">
+                <input type="file" id="galleryInput" accept="image/*" class="hidden" onchange="handleFileSelect(event)">
+
+                <!-- ANTEPRIMA FOTO -->
+                <div id="imagePreview" class="hidden w-full h-48 bg-gray-100 rounded-lg mb-4 overflow-hidden relative border border-gray-200">
+                    <img id="previewImg" class="w-full h-full object-cover">
+                    <button type="button" onclick="removeImage()" class="absolute top-2 right-2 bg-red-500 text-white rounded-full w-8 h-8 flex items-center justify-center shadow-lg hover:bg-red-600 transition">✕</button>
+                </div>
                 
                 <label class="text-xs font-bold text-gray-500 uppercase mb-1 block">Dove (Tocca la mappa)</label>
                 <p class="text-[10px] text-red-500 mb-1 font-bold">⚠️ Indica luogo pubblico, NON casa tua!</p>
@@ -338,6 +357,9 @@
         let currentViewLng = 0;
         let isLoginMode = true; 
 
+        // GESTIONE FOTO UNIFICATA
+        let selectedImageFile = null;
+
         // MAPPA GLOBALE & CLUSTERING
         let globalMap = null;
         let markersClusterGroup = null; // Nuova variabile per il cluster
@@ -363,6 +385,29 @@
             if(currentUser && isAuthorized) checkMessages();
         }
 
+        // NUOVA GESTIONE FOTO
+        function handleFileSelect(event) {
+            const file = event.target.files[0];
+            if (file) {
+                selectedImageFile = file;
+                // Mostra Anteprima
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    document.getElementById('previewImg').src = e.target.result;
+                    document.getElementById('imagePreview').classList.remove('hidden');
+                }
+                reader.readAsDataURL(file);
+            }
+        }
+
+        function removeImage() {
+            selectedImageFile = null;
+            document.getElementById('previewImg').src = '';
+            document.getElementById('imagePreview').classList.add('hidden');
+            document.getElementById('cameraInput').value = '';
+            document.getElementById('galleryInput').value = '';
+        }
+
         function openHelpModal() { document.getElementById('helpModal').classList.remove('hidden'); }
         function closeHelpModal() { document.getElementById('helpModal').classList.add('hidden'); }
 
@@ -382,17 +427,9 @@
             btn.innerText = "ELIMINAZIONE..."; btn.disabled = true;
 
             try {
-                // 1. Cancella oggetti (le policy permettono di cancellare i propri)
                 const { error: errItems } = await supabase.from('oggetti_smarriti').delete().eq('user_id', currentUser.id);
-                // 2. Cancella profilo (policy permette owner delete?) -> Se no, prova soft delete o basati su CASCADE
-                // Per sicurezza con RLS standard, spesso serve cancellare il profilo per scatenare il resto se ci sono CASCADE FK.
-                // Se non ci sono FK Cascade, cancelliamo manuale.
-                
-                // Proviamo a cancellare la riga profilo.
                 const { error: errProfile } = await supabase.from('profiles').delete().eq('id', currentUser.id);
-                
                 if (errProfile) throw errProfile;
-
                 await supabase.auth.signOut();
                 window.location.reload();
             } catch (e) {
@@ -424,7 +461,6 @@
             finally { btn.disabled = false; updateAuthUI(); }
         }
 
-        // NEW: Google Login
         async function loginGoogle() { 
             const redirectUrl = 'https://infomichelerosati.github.io/oggetti-smarriti/'; 
             await supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: redirectUrl } }); 
@@ -462,7 +498,6 @@
             if (id === 'list' || id === 'map') stickyFilters.classList.remove('hidden'); else stickyFilters.classList.add('hidden');
             
             document.querySelectorAll('.nav-btn').forEach(btn => {
-                // FIX: Manteniamo la classe 'hidden' se presente
                 const isHidden = btn.classList.contains('hidden');
                 btn.className = "nav-btn flex flex-col items-center justify-center w-full h-full text-gray-400 hover:text-blue-500";
                 if (isHidden) btn.classList.add('hidden');
@@ -502,7 +537,6 @@
             if (!globalMap) {
                 globalMap = L.map('globalMap').setView([42.7600, 11.1100], 13);
                 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap' }).addTo(globalMap);
-                // Crea il gruppo Cluster
                 markersClusterGroup = L.markerClusterGroup(); 
                 globalMap.addLayer(markersClusterGroup);
             }
@@ -514,7 +548,7 @@
 
         function renderGlobalMarkers() {
             if (!globalMap || !markersClusterGroup) return;
-            markersClusterGroup.clearLayers(); // Pulisci il cluster, non la mappa diretta
+            markersClusterGroup.clearLayers(); 
 
             allItemsData.forEach(item => {
                 if (item.latitudine && item.longitudine) {
@@ -528,7 +562,6 @@
                     });
 
                     const marker = L.marker([item.latitudine, item.longitudine], {icon: icon});
-                    
                     const safeTitle = item.titolo.replace(/'/g, "\\'");
                     const dateStr = item.data_smarrimento ? new Date(item.data_smarrimento).toLocaleDateString() : 'Data ignota';
                     
@@ -546,7 +579,7 @@
                         </div>
                     `;
                     marker.bindPopup(popupContent, { className: 'custom-popup' });
-                    markersClusterGroup.addLayer(marker); // Aggiungi al cluster
+                    markersClusterGroup.addLayer(marker);
                 }
             });
         }
@@ -557,8 +590,7 @@
             if(el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
             else showToast("Oggetto nella lista...");
         }
-        // --- END GLOBAL MAP ---
-
+        
         function openViewMap(lat, lng, title) {
             currentViewLat = lat; currentViewLng = lng; document.getElementById('viewMapTitle').innerText = title; document.getElementById('viewMapModal').classList.remove('hidden');
             setTimeout(() => {
@@ -572,12 +604,9 @@
         function openImageModal(url) { document.getElementById('fullScreenImage').src = url; document.getElementById('viewImageModal').classList.remove('hidden'); }
         function closeImageModal() { document.getElementById('viewImageModal').classList.add('hidden'); setTimeout(() => { document.getElementById('fullScreenImage').src = ''; }, 200); }
 
-        // FUNZIONE PER ESPANDERE IL TESTO
         function toggleExpand(id) {
             const el = document.getElementById(`desc-${id}`);
-            if (el) {
-                el.classList.toggle('line-clamp-2');
-            }
+            if (el) el.classList.toggle('line-clamp-2');
         }
 
         async function loadItems() {
@@ -593,7 +622,6 @@
             if (searchTerm) query = query.or(`titolo.ilike.%${searchTerm}%,descrizione.ilike.%${searchTerm}%`);
             
             const { data: items, error } = await query;
-            
             if (error) { container.innerHTML = `<p class="text-red-500 text-center text-sm">Errore: ${error.message}</p>`; return; }
             
             allItemsData = items || [];
@@ -611,8 +639,6 @@
                 const badge = isRitrovato ? `<span class="bg-green-600 text-white text-[10px] px-2 py-0.5 rounded font-bold uppercase tracking-wider">RITROVATO ✅</span>` : `<span class="bg-blue-50 text-blue-700 text-[10px] px-2 py-0.5 rounded font-bold uppercase tracking-wider">${item.categoria || 'Altro'}</span>`;
                 const showContact = !isOwner && currentUser && isAuthorized && !isRitrovato;
                 const safeTitle = item.titolo.replace(/'/g, "\\'");
-                
-                // Format Data Smarrimento
                 const dataPerso = item.data_smarrimento ? new Date(item.data_smarrimento).toLocaleDateString() : '<span class="italic text-gray-300">Data ignota</span>';
                 
                 return `
@@ -621,15 +647,12 @@
                         ${item.foto_url ? `<img src="${item.foto_url}" class="w-full h-full object-cover">` : '<div class="flex items-center justify-center h-full text-gray-300 text-2xl">📷</div>'}
                     </div>
                     <div class="flex-1 min-w-0 flex flex-col justify-between">
-                        <!-- CLICK WRAPPER PER ESPANDERE -->
                         <div onclick="toggleExpand('${item.id}')" class="cursor-pointer select-none">
                             <div class="flex justify-between items-start mb-1">${badge}<span class="text-[10px] text-gray-400">Pubblicato: ${new Date(item.created_at).toLocaleDateString()}</span></div>
                             <h3 class="font-bold text-gray-800 text-base leading-tight mb-1 truncate">${item.titolo}</h3>
                             <p class="text-[10px] text-gray-500 mb-1">📅 Data evento: <strong class="text-gray-700">${dataPerso}</strong></p>
-                            <!-- DESCRIZIONE CON ID PER ESPANSIONE -->
                             <p id="desc-${item.id}" class="text-gray-500 text-xs line-clamp-2 leading-relaxed transition-all duration-200">${item.descrizione}</p>
                         </div>
-                        
                         <div class="flex items-center justify-between mt-2 pt-2 border-t border-gray-50">
                             <div class="flex gap-2">
                                 ${item.latitudine ? `<button onclick="openViewMap(${item.latitudine}, ${item.longitudine}, '${safeTitle}')" class="text-gray-500 hover:text-blue-600 text-xs flex items-center gap-1 bg-gray-50 px-2 py-1 rounded border border-gray-100">📍 Mappa</button>` : ''}
@@ -656,16 +679,12 @@
             document.getElementById('msgText').value = `Ciao, ho visto che l'oggetto "${itemTitle}" è segnato come ritrovato. Posso procedere alla cancellazione definitiva dall'app? Grazie, Admin.`;
         }
 
-        // GESTIONE MESSAGGI RITROVAMENTO
         function openContactModal(receiverId, itemId) {
             if(!isAuthorized) { showToast("Utente non autorizzato."); return; }
             document.getElementById('msgReceiverId').value = receiverId;
             document.getElementById('msgItemId').value = itemId;
-            
-            // Reset Checkbox & Stile
             document.getElementById('foundCheck').checked = false;
             toggleFoundMessage(); 
-            
             document.getElementById('contactModal').classList.remove('hidden');
         }
 
@@ -683,11 +702,7 @@
             }
         }
 
-        function closeContactModal() { 
-            document.getElementById('contactModal').classList.add('hidden'); 
-            document.getElementById('msgText').value = ''; 
-        }
-        
+        function closeContactModal() { document.getElementById('contactModal').classList.add('hidden'); document.getElementById('msgText').value = ''; }
         function openPolicyModal() { document.getElementById('policyModal').classList.remove('hidden'); }
 
         async function sendMessage() {
@@ -695,14 +710,8 @@
             const itemId = document.getElementById('msgItemId').value;
             let text = document.getElementById('msgText').value;
             const isFound = document.getElementById('foundCheck').checked;
-
             if(!text.trim()) { showToast("Scrivi un messaggio!"); return; }
-
-            // Prefisso se ritrovato
-            if (isFound) {
-                text = "🎉 [OGGETTO RITROVATO] " + text;
-            }
-
+            if (isFound) text = "🎉 [OGGETTO RITROVATO] " + text;
             if (!isAdmin) {
                 const { count } = await supabase.from('messaggi').select('*', { count: 'exact', head: true }).eq('item_id', itemId).eq('sender_id', currentUser.id);
                 if (count >= MAX_MESSAGES) { showToast(`Limite raggiunto (${MAX_MESSAGES} msg).`); closeContactModal(); return; }
@@ -744,13 +753,13 @@
             const cat = document.getElementById('catSelect').value; 
             const lat = document.getElementById('lat').value; 
             const lng = document.getElementById('lng').value; 
-            const dateLost = document.getElementById('dateLost').value; // Nuova Data
-            const fileInput = document.getElementById('photo');
+            const dateLost = document.getElementById('dateLost').value; 
             
             let publicUrl = null;
-            if (fileInput.files.length > 0) {
+            // USA LA VARIABILE GLOBALE selectedImageFile
+            if (selectedImageFile) {
                 try {
-                    const imageFile = fileInput.files[0]; const compressedFile = await imageCompression(imageFile, { maxSizeMB: 0.5, maxWidthOrHeight: 1024 });
+                    const compressedFile = await imageCompression(selectedImageFile, { maxSizeMB: 0.5, maxWidthOrHeight: 1024 });
                     const fileName = `${Date.now()}_${Math.random().toString(36).substring(7)}`;
                     const { error } = await supabase.storage.from(BUCKET_NAME).upload(fileName, compressedFile);
                     if (error) throw error; const { data: urlData } = supabase.storage.from(BUCKET_NAME).getPublicUrl(fileName); publicUrl = urlData.publicUrl;
@@ -758,17 +767,13 @@
             }
             
             const { error } = await supabase.from('oggetti_smarriti').insert({ 
-                titolo: title, 
-                descrizione: desc, 
-                categoria: cat, 
-                latitudine: lat || null, 
-                longitudine: lng || null, 
-                foto_url: publicUrl, 
-                stato: 'attivo',
-                data_smarrimento: dateLost || new Date().toISOString() // Salva data
+                titolo: title, descrizione: desc, categoria: cat, latitudine: lat || null, longitudine: lng || null, foto_url: publicUrl, stato: 'attivo', data_smarrimento: dateLost || new Date().toISOString() 
             });
             
-            if (error) showToast("Errore: " + error.message); else { document.getElementById('fbText').value = `🔍 SMARRITO/RITROVATO: ${cat.toUpperCase()}\nCosa: ${title}\nData: ${new Date(dateLost).toLocaleDateString()}\nInfo: ${desc}\n\nVedi dettagli: ${window.location.href}`; document.getElementById('fbModal').classList.remove('hidden'); e.target.reset(); if(marker) map.removeLayer(marker); showSection('list'); loadItems(); }
+            if (error) showToast("Errore: " + error.message); else { 
+                document.getElementById('fbText').value = `🔍 SMARRITO/RITROVATO: ${cat.toUpperCase()}\nCosa: ${title}\nData: ${new Date(dateLost).toLocaleDateString()}\nInfo: ${desc}\n\nVedi dettagli: ${window.location.href}`; 
+                document.getElementById('fbModal').classList.remove('hidden'); e.target.reset(); removeImage(); if(marker) map.removeLayer(marker); showSection('list'); loadItems(); 
+            }
             btn.innerText = "PUBBLICA"; btn.disabled = false;
         }
         
@@ -779,28 +784,20 @@
                 try { const fileName = item.foto_url.split('/').pop(); await supabase.storage.from(BUCKET_NAME).remove([fileName]); } catch (err) { console.error("Errore cancellazione foto:", err); }
             }
             await supabase.from('oggetti_smarriti').delete().eq('id', id);
-            loadItems(); 
-            showToast("Rimosso!"); 
+            loadItems(); showToast("Rimosso!"); 
         }
 
         async function checkUser() {
             const { data: { session } } = await supabase.auth.getSession();
             currentUser = session?.user;
-            
-            const loginBtn = document.getElementById('loginBtn'); 
-            const profileBtn = document.getElementById('profileBtn'); 
-            const inboxBtn = document.getElementById('inboxBtn');
+            const loginBtn = document.getElementById('loginBtn'); const profileBtn = document.getElementById('profileBtn'); const inboxBtn = document.getElementById('inboxBtn');
             const addForm = document.getElementById('addForm'); const loginWarning = document.getElementById('loginWarning'); const pendingAlert = document.getElementById('pendingAlert'); const navAdmin = document.getElementById('nav-admin');
 
             if (currentUser) {
                 const { data: profile } = await supabase.from('profiles').select('*').eq('id', currentUser.id).single();
-                userProfile = profile;
-                isAdmin = profile?.is_admin || false;
-                isAuthorized = profile?.is_authorized || false;
+                userProfile = profile; isAdmin = profile?.is_admin || false; isAuthorized = profile?.is_authorized || false;
 
-                loginBtn.classList.add('hidden'); 
-                profileBtn.classList.remove('hidden'); // Mostra profilo invece di logout
-
+                loginBtn.classList.add('hidden'); profileBtn.classList.remove('hidden');
                 if (isAuthorized) {
                     pendingAlert.classList.add('hidden'); addForm.classList.remove('hidden'); loginWarning.classList.add('hidden'); inboxBtn.classList.remove('hidden');
                     if (isAdmin) navAdmin.classList.remove('hidden');
@@ -810,8 +807,7 @@
                     document.getElementById('warningBtn').classList.add('hidden'); inboxBtn.classList.add('hidden'); navAdmin.classList.add('hidden');
                 }
             } else {
-                loginBtn.classList.remove('hidden'); 
-                profileBtn.classList.add('hidden'); inboxBtn.classList.add('hidden'); pendingAlert.classList.add('hidden');
+                loginBtn.classList.remove('hidden'); profileBtn.classList.add('hidden'); inboxBtn.classList.add('hidden'); pendingAlert.classList.add('hidden');
                 addForm.classList.add('hidden'); loginWarning.classList.remove('hidden');
                 document.getElementById('warningText').innerText = "Accedi per segnalare un oggetto.";
                 document.getElementById('warningBtn').classList.remove('hidden'); navAdmin.classList.add('hidden');
@@ -823,8 +819,7 @@
 
         // --- ADMIN PANEL ---
         async function loadAdminPanel() {
-            const container = document.getElementById('adminList'); 
-            container.innerHTML = '<div class="text-center"><div class="loader ease-linear rounded-full border-4 border-t-4 border-gray-200 h-8 w-8 mx-auto"></div></div>';
+            const container = document.getElementById('adminList'); container.innerHTML = '<div class="text-center"><div class="loader ease-linear rounded-full border-4 border-t-4 border-gray-200 h-8 w-8 mx-auto"></div></div>';
             const [usersRes, itemsRes] = await Promise.all([
                  supabase.from('profiles').select('*').order('email', {ascending: true}),
                  supabase.from('oggetti_smarriti').select('*, profiles(email)').eq('stato', 'ritrovato')
