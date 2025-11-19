@@ -184,7 +184,7 @@
     <div id="helpModal" class="fixed inset-0 bg-black bg-opacity-60 hidden flex items-center justify-center z-[100] backdrop-blur-sm p-4">
         <div class="bg-white p-6 rounded-2xl max-w-md w-full shadow-2xl">
             <h3 class="text-xl font-bold text-gray-800 mb-2">Guida Rapida</h3>
-            <p class="text-sm text-gray-600 mb-4">Usa la scheda <strong>Mappa</strong> per vedere gli oggetti raggruppati.</p>
+            <p class="text-sm text-gray-600 mb-4">Usa la scheda <strong>Mappa</strong> per vedere gli oggetti raggruppati. Clicca su un oggetto in lista per leggere tutto il testo.</p>
             <button onclick="closeHelpModal()" class="w-full bg-blue-600 text-white font-bold py-3 rounded-xl shadow">Ho capito</button>
         </div>
     </div>
@@ -493,6 +493,14 @@
         function openImageModal(url) { document.getElementById('fullScreenImage').src = url; document.getElementById('viewImageModal').classList.remove('hidden'); }
         function closeImageModal() { document.getElementById('viewImageModal').classList.add('hidden'); setTimeout(() => { document.getElementById('fullScreenImage').src = ''; }, 200); }
 
+        // FUNZIONE PER ESPANDERE IL TESTO
+        function toggleExpand(id) {
+            const el = document.getElementById(`desc-${id}`);
+            if (el) {
+                el.classList.toggle('line-clamp-2');
+            }
+        }
+
         async function loadItems() {
             const container = document.getElementById('itemsContainer');
             const searchTerm = document.getElementById('searchBar').value.toLowerCase();
@@ -534,12 +542,15 @@
                         ${item.foto_url ? `<img src="${item.foto_url}" class="w-full h-full object-cover">` : '<div class="flex items-center justify-center h-full text-gray-300 text-2xl">📷</div>'}
                     </div>
                     <div class="flex-1 min-w-0 flex flex-col justify-between">
-                        <div>
+                        <!-- CLICK WRAPPER PER ESPANDERE -->
+                        <div onclick="toggleExpand('${item.id}')" class="cursor-pointer select-none">
                             <div class="flex justify-between items-start mb-1">${badge}<span class="text-[10px] text-gray-400">Pubblicato: ${new Date(item.created_at).toLocaleDateString()}</span></div>
                             <h3 class="font-bold text-gray-800 text-base leading-tight mb-1 truncate">${item.titolo}</h3>
                             <p class="text-[10px] text-gray-500 mb-1">📅 Data evento: <strong class="text-gray-700">${dataPerso}</strong></p>
-                            <p class="text-gray-500 text-xs line-clamp-2 leading-relaxed">${item.descrizione}</p>
+                            <!-- DESCRIZIONE CON ID PER ESPANSIONE -->
+                            <p id="desc-${item.id}" class="text-gray-500 text-xs line-clamp-2 leading-relaxed transition-all duration-200">${item.descrizione}</p>
                         </div>
+                        
                         <div class="flex items-center justify-between mt-2 pt-2 border-t border-gray-50">
                             <div class="flex gap-2">
                                 ${item.latitudine ? `<button onclick="openViewMap(${item.latitudine}, ${item.longitudine}, '${safeTitle}')" class="text-gray-500 hover:text-blue-600 text-xs flex items-center gap-1 bg-gray-50 px-2 py-1 rounded border border-gray-100">📍 Mappa</button>` : ''}
@@ -665,7 +676,6 @@
             currentUser = session?.user;
             
             const loginBtn = document.getElementById('loginBtn'); 
-            // FIX: logoutBtn rimosso perchè sostituito da profileBtn
             const profileBtn = document.getElementById('profileBtn'); 
             const inboxBtn = document.getElementById('inboxBtn');
             const addForm = document.getElementById('addForm'); const loginWarning = document.getElementById('loginWarning'); const pendingAlert = document.getElementById('pendingAlert'); const navAdmin = document.getElementById('nav-admin');
@@ -677,7 +687,6 @@
                 isAuthorized = profile?.is_authorized || false;
 
                 loginBtn.classList.add('hidden'); 
-                // FIX: rimosso logoutBtn.classList.add
                 profileBtn.classList.remove('hidden'); // Mostra profilo invece di logout
 
                 if (isAuthorized) {
@@ -690,7 +699,6 @@
                 }
             } else {
                 loginBtn.classList.remove('hidden'); 
-                // FIX: rimosso logoutBtn.classList.add
                 profileBtn.classList.add('hidden'); inboxBtn.classList.add('hidden'); pendingAlert.classList.add('hidden');
                 addForm.classList.add('hidden'); loginWarning.classList.remove('hidden');
                 document.getElementById('warningText').innerText = "Accedi per segnalare un oggetto.";
