@@ -240,7 +240,7 @@
                 </div>
                 <div class="bg-gray-50 p-3 rounded-lg border border-gray-100">
                     <h4 class="font-bold text-gray-900 flex items-center gap-2 mb-1">👮 Admin</h4>
-                    <p class="text-xs text-gray-600">Gestione utenti (approvazioni/ban) e pulizia oggetti ritrovati.</p>
+                    <p class="text-xs text-gray-600">Gestione utenti (approvazioni/ban/cancellazione) e pulizia oggetti.</p>
                 </div>
             </div>
             <button onclick="closeHelpModal()" class="w-full bg-blue-600 text-white font-bold py-3 rounded-xl mt-4 shadow hover:bg-blue-700 transition">Ho capito</button>
@@ -427,8 +427,12 @@
             btn.innerText = "ELIMINAZIONE..."; btn.disabled = true;
 
             try {
-                const { error: errItems } = await supabase.from('oggetti_smarriti').delete().eq('user_id', currentUser.id);
+                // Rimuoviamo prima le relazioni
+                await supabase.from('oggetti_smarriti').delete().eq('user_id', currentUser.id);
+                await supabase.from('messaggi').delete().eq('sender_id', currentUser.id);
+                await supabase.from('messaggi').delete().eq('receiver_id', currentUser.id);
                 const { error: errProfile } = await supabase.from('profiles').delete().eq('id', currentUser.id);
+                
                 if (errProfile) throw errProfile;
                 await supabase.auth.signOut();
                 window.location.reload();
@@ -852,7 +856,14 @@
              }
              if(pending.length > 0) {
                 html += `<h3 class="text-sm font-bold text-yellow-600 uppercase mt-2 mb-1">Da Approvare (${pending.length})</h3>`;
-                html += pending.map(p => `<div class="bg-yellow-50 p-3 rounded border border-yellow-200 mb-2 flex justify-between items-center"><div class="text-xs truncate w-1/2 font-medium">${p.email}</div><button onclick="authorizeUser('${p.id}')" class="bg-green-500 text-white px-3 py-1 rounded text-xs font-bold shadow">✅ Autorizza</button></div>`).join('');
+                html += pending.map(p => `
+                    <div class="bg-yellow-50 p-3 rounded border border-yellow-200 mb-2 flex justify-between items-center">
+                        <div class="text-xs truncate w-1/2 font-medium">${p.email}</div>
+                        <div class="flex gap-2">
+                            <button onclick="authorizeUser('${p.id}')" class="bg-green-500 text-white px-2 py-1 rounded text-xs font-bold shadow">✅ SI</button>
+                            <button onclick="adminDeleteUser('${p.id}')" class="bg-red-50 text-red-600 px-2 py-1 rounded text-xs font-bold border border-red-200">❌ NO</button>
+                        </div>
+                    </div>`).join('');
              } else if (!searchTerm) html += `<p class="text-xs text-gray-400 italic mb-4">Nessun utente in attesa.</p>`;
              
              html += `<h3 class="text-sm font-bold text-gray-600 uppercase mt-4 mb-1">Utenti Attivi (${approved.length})</h3>`;
@@ -862,7 +873,16 @@
                     const isMe = p.id === currentUser.id; const targetIsSuperAdmin = p.is_super_admin; 
                     let badge = ""; if (p.is_admin) badge = "<span class='text-blue-600 font-bold text-[10px]'>ADMIN</span>"; if (targetIsSuperAdmin) badge = "<span class='text-purple-600 font-bold text-[10px] ml-1'>👑 SUPER</span>";
                     const showActions = !isMe && !targetIsSuperAdmin;
-                    return `<div class="p-2 border-b flex justify-between items-center"><span class="text-xs truncate w-1/2 flex items-center gap-1">${p.email} ${badge}</span><div class="flex gap-2">${showActions ? (!p.is_admin ? `<button onclick="toggleAdmin('${p.id}', true)" class="text-xs text-blue-600 underline">👮 Nomina</button>` : `<button onclick="toggleAdmin('${p.id}', false)" class="text-xs text-gray-400 underline">Rimuovi</button>`) : ''}${showActions ? `<button onclick="toggleBan('${p.id}', ${!p.is_banned})" class="text-xs underline ${p.is_banned ? 'text-green-600' : 'text-red-500'}">${p.is_banned ? 'Riammetti' : 'Banna'}</button>` : ''}</div></div>`}).join('');
+                    return `
+                    <div class="p-2 border-b flex justify-between items-center bg-white">
+                        <span class="text-xs truncate w-1/3 flex items-center gap-1">${p.email} ${badge}</span>
+                        <div class="flex gap-2 items-center">
+                            ${showActions ? (!p.is_admin ? `<button onclick="toggleAdmin('${p.id}', true)" class="text-xs text-blue-600 underline">👮 Nomina</button>` : `<button onclick="toggleAdmin('${p.id}', false)" class="text-xs text-gray-400 underline">Rimuovi</button>`) : ''}
+                            ${showActions ? `<button onclick="toggleBan('${p.id}', ${!p.is_banned})" class="text-xs underline ${p.is_banned ? 'text-green-600' : 'text-red-500'}">${p.is_banned ? 'Riammetti' : 'Banna'}</button>` : ''}
+                            ${showActions ? `<button onclick="adminDeleteUser('${p.id}')" class="text-xs text-red-700 font-bold ml-1 border border-red-200 px-1 rounded hover:bg-red-50" title="Elimina definitivamente">❌</button>` : ''}
+                        </div>
+                    </div>`
+                }).join('');
              }
              container.innerHTML = html;
         }
@@ -870,6 +890,42 @@
         async function authorizeUser(userId) { if(!confirm("Autorizzare?")) return; await supabase.from('profiles').update({ is_authorized: true }).eq('id', userId); loadAdminPanel(); showToast("Autorizzato!"); }
         async function toggleAdmin(userId, state) { if(!confirm(state ? "Nominare Admin?" : "Rimuovere Admin?")) return; await supabase.from('profiles').update({ is_admin: state }).eq('id', userId); showToast("Fatto."); loadAdminPanel(); }
         async function toggleBan(id, state) { if(!confirm(state ? "Bannare?" : "Riammettere?")) return; await supabase.from('profiles').update({ is_banned: state }).eq('id', id); loadAdminPanel(); showToast("Fatto."); }
+
+        // --- NUOVA FUNZIONE ELIMINA UTENTE ---
+        async function adminDeleteUser(userId) {
+            if(!confirm("⚠️ ATTENZIONE: Questa azione è irreversibile!\n\nEliminare l'utente cancellerà:\n- Tutti i suoi annunci\n- Il suo profilo\n- I suoi messaggi\n\nProcedere?")) return;
+
+            try {
+                // 1. Cancella Annunci (Items)
+                // Nota: In un backend reale faremmo prima una select per cancellare le immagini dallo storage, 
+                // qui ci fidiamo che siano pochi o accettiamo file orfani per semplicità client-side.
+                const { error: errItems } = await supabase.from('oggetti_smarriti').delete().eq('user_id', userId);
+                if(errItems) throw errItems;
+
+                // 2. Cancella Messaggi
+                const { error: errMsg1 } = await supabase.from('messaggi').delete().eq('sender_id', userId);
+                const { error: errMsg2 } = await supabase.from('messaggi').delete().eq('receiver_id', userId);
+
+                // 3. Cancella Profilo
+                const { error: errProfile } = await supabase.from('profiles').delete().eq('id', userId);
+                if(errProfile) throw errProfile;
+
+                // 4. Opzionale: Prova a cancellare Auth se esiste la funzione RPC
+                // Se non hai creato la funzione SQL 'delete_user_by_admin', questa chiamata fallirà silenziosamente o darà errore, 
+                // ma il profilo sarà comunque sparito rendendo l'utente "fantasma".
+                try {
+                    await supabase.rpc('delete_user_by_admin', { target_user_id: userId });
+                } catch(e) {
+                    console.log("RPC non disponibile o errore permessi per auth delete: ", e);
+                }
+
+                showToast("Utente eliminato con successo!");
+                loadAdminPanel(); // Ricarica la lista
+
+            } catch(e) {
+                alert("Errore durante l'eliminazione: " + e.message);
+            }
+        }
 
         init();
     </script>
